@@ -7,6 +7,8 @@ import StatusPill from '@/components/common/StatusPill';
 import WalletStatusCard from '@/components/wallet/WalletStatusCard';
 import OwnershipVerificationCard from '@/components/wallet/OwnershipVerificationCard';
 import NetworkBadge from '@/components/wallet/NetworkBadge';
+import ProfileDataCard from '@/components/profile/ProfileDataCard';
+import WalletIdentityCard from '@/components/profile/WalletIdentityCard';
 import { useClusterStatus } from '@/hooks/useClusterStatus';
 import { useSession } from '@/hooks/useSession';
 import { GOOGLE_AUTH_ENABLED, GUEST_MODE_ENABLED, NETWORK_LABELS, SOLANA_NETWORK, rpcHost } from '@/lib/config';
@@ -101,6 +103,11 @@ const Settings = () => {
                         )}
                     </SurfaceCard>
                 </div>
+            </section>
+
+            <section className="grid gap-6 lg:grid-cols-2">
+                <WalletIdentityCard />
+                <ProfileDataCard />
             </section>
         </div>
     );

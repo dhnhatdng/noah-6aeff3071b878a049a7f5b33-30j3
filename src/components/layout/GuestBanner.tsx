@@ -14,8 +14,8 @@ const GuestBanner = () => {
                 <p className="flex items-center gap-2 text-warning">
                     <Eye className="h-4 w-4 shrink-0" aria-hidden />
                     <span>
-                        <strong className="font-semibold">Guest demo mode.</strong> No wallet is connected and nothing is
-                        saved.
+                        <strong className="font-semibold">Guest demo mode.</strong> No wallet is connected. Your profile is
+                        saved in this browser only.
                     </span>
                 </p>
                 <div className="flex gap-2 sm:ml-auto">

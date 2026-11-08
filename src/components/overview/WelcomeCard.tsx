@@ -1,12 +1,15 @@
 import { motion } from 'framer-motion';
 import { useWalletConnect } from '@/hooks/useWalletConnect';
 import { useSession } from '@/hooks/useSession';
+import { useProfile } from '@/hooks/useProfile';
 import { shortenAddress } from '@/lib/wallet';
 import { cn } from '@/lib/utils';
 
 const WelcomeCard = ({ className }: { className?: string }) => {
     const { connected, walletName, address } = useWalletConnect();
     const { isGuest } = useSession();
+    const { profile } = useProfile();
+    const firstName = profile?.fullName.split(' ')[0];
 
     return (
         <motion.section
@@ -31,7 +34,7 @@ const WelcomeCard = ({ className }: { className?: string }) => {
             </svg>
             <p className="relative text-xs font-semibold uppercase tracking-[0.18em] text-primary-strong">Overview</p>
             <h1 className="relative mt-3 max-w-xl text-3xl font-semibold leading-[1.1] sm:text-[40px]">
-                Welcome to Breakpoint Connect
+                {firstName ? `Welcome back, ${firstName}` : 'Welcome to Breakpoint Connect'}
             </h1>
             <p className="relative mt-3 max-w-lg text-[15px] leading-relaxed text-muted-foreground">
                 {connected && address

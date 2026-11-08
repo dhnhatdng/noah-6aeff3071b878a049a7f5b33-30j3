@@ -1,56 +1,128 @@
-import { Search, UsersRound } from 'lucide-react';
+import { useMemo, useState } from 'react';
+import { Info, Search, SearchX } from 'lucide-react';
 import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
 import PageHeader from '@/components/common/PageHeader';
-import SurfaceCard from '@/components/common/SurfaceCard';
 import EmptyState from '@/components/common/EmptyState';
+import DemoProfileCard from '@/components/profile/DemoProfileCard';
+import ProfileDetailDialog from '@/components/profile/ProfileDetailDialog';
+import { DEMO_PROFILES, demoCategoryCounts, demoMatchesQuery } from '@/lib/profile/demoProfiles';
+import { DEMO_CATEGORIES, type DemoCategory } from '@/lib/profile/options';
+import type { DemoProfile } from '@/lib/profile/types';
+import { cn } from '@/lib/utils';
 
-const filters = ['All attendees', 'Builders', 'Investors', 'Founders', 'Speakers'];
+type Filter = DemoCategory | 'all';
 
-const Discover = () => (
-    <div className="flex flex-col gap-8">
-        <PageHeader
-            eyebrow="Discover People"
-            title="Browse attendees"
-            description="Search and filter the attendee directory to find people by role, interest or project."
-        />
+const Discover = () => {
+    const [query, setQuery] = useState('');
+    const [category, setCategory] = useState<Filter>('all');
+    const [selected, setSelected] = useState<DemoProfile | null>(null);
 
-        <SurfaceCard>
-            <div className="flex flex-col gap-4">
+    const counts = useMemo(() => demoCategoryCounts(), []);
+    const results = useMemo(
+        () =>
+            DEMO_PROFILES.filter(
+                (p) => (category === 'all' || p.category === category) && demoMatchesQuery(p, query),
+            ),
+        [category, query],
+    );
+
+    const filters: { value: Filter; label: string; count: number }[] = [
+        { value: 'all', label: 'All', count: DEMO_PROFILES.length },
+        ...DEMO_CATEGORIES.map((c) => ({ value: c.value as Filter, label: c.label, count: counts[c.value] })),
+    ];
+
+    return (
+        <div className="flex flex-col gap-6">
+            <PageHeader
+                eyebrow="Discover People"
+                title="Browse attendees"
+                description="Search and filter profiles by role, skill, interest or topic."
+            />
+
+            <div
+                role="note"
+                className="flex items-start gap-3 rounded-2xl border border-warning/20 bg-warning-soft px-4 py-3 text-sm text-warning"
+            >
+                <Info className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
+                <p>
+                    <strong className="font-semibold">Demo data.</strong> Every profile below is a fictional DEMO USER
+                    created for testing. None of them are real Breakpoint attendees.
+                </p>
+            </div>
+
+            <div className="flex flex-col gap-4 rounded-2xl border border-border bg-card p-4 shadow-card sm:p-5">
                 <div className="relative">
                     <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                     <Input
-                        disabled
-                        placeholder="Search by name, role or interest"
+                        value={query}
+                        onChange={(e) => setQuery(e.target.value)}
+                        placeholder="Search name, role, skill, interest or topic"
                         className="h-11 rounded-xl border-border bg-background pl-10"
-                        aria-label="Search attendees"
+                        aria-label="Search profiles"
                     />
                 </div>
-                <div className="flex flex-wrap gap-2" role="group" aria-label="Filters">
-                    {filters.map((f, i) => (
-                        <button
-                            key={f}
-                            type="button"
-                            disabled
-                            className={
-                                i === 0
-                                    ? 'rounded-full bg-primary px-3.5 py-1.5 text-xs font-semibold text-primary-foreground'
-                                    : 'rounded-full border border-border bg-background px-3.5 py-1.5 text-xs font-medium text-muted-foreground disabled:opacity-70'
-                            }
-                        >
-                            {f}
-                        </button>
-                    ))}
+                <div className="flex flex-wrap gap-2" role="group" aria-label="Filter by category">
+                    {filters.map((f) => {
+                        const active = category === f.value;
+                        return (
+                            <button
+                                key={f.value}
+                                type="button"
+                                aria-pressed={active}
+                                onClick={() => setCategory(f.value)}
+                                className={cn(
+                                    'inline-flex items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-xs font-medium transition-colors',
+                                    active
+                                        ? 'border-primary bg-primary text-primary-foreground'
+                                        : 'border-border bg-background text-muted-foreground hover:border-primary hover:text-foreground',
+                                )}
+                            >
+                                {f.label}
+                                <span className={active ? 'text-primary-foreground/70' : 'text-muted-foreground/70'}>{f.count}</span>
+                            </button>
+                        );
+                    })}
                 </div>
             </div>
-        </SurfaceCard>
 
-        <EmptyState
-            icon={UsersRound}
-            title="No attendee profiles to show yet"
-            description="The directory will populate as attendees create their profiles. Search and filters activate then."
-            className="bg-card"
-        />
-    </div>
-);
+            <p className="text-sm text-muted-foreground" aria-live="polite">
+                Showing {results.length} of {DEMO_PROFILES.length} demo profiles
+            </p>
+
+            {results.length === 0 ? (
+                <EmptyState
+                    icon={SearchX}
+                    title="No profiles match"
+                    description="Try a different search term or category."
+                    className="bg-card"
+                    action={
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            className="rounded-lg border-border"
+                            onClick={() => {
+                                setQuery('');
+                                setCategory('all');
+                            }}
+                        >
+                            Clear filters
+                        </Button>
+                    }
+                />
+            ) : (
+                <ul className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+                    {results.map((p) => (
+                        <li key={p.id}>
+                            <DemoProfileCard profile={p} onOpen={() => setSelected(p)} />
+                        </li>
+                    ))}
+                </ul>
+            )}
+
+            <ProfileDetailDialog profile={selected} onOpenChange={(open) => !open && setSelected(null)} />
+        </div>
+    );
+};
 
 export default Discover;

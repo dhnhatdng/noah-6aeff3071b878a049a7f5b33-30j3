@@ -1,6 +1,8 @@
 import { useMemo } from 'react';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { useSession } from './useSession';
+import { useProfile } from './useProfile';
+import { countAnswered } from '@/lib/profile/questions';
 
 export interface CompletionStep {
     id: string;
@@ -10,53 +12,53 @@ export interface CompletionStep {
     to: string;
 }
 
-/**
- * Profile completion derived only from real state.
- * Profile fields are not persisted yet (Phase 2), so they report as incomplete.
- */
+/** Profile completion derived only from real, saved state. */
 export const useProfileCompletion = () => {
-    const { connected } = useWallet();
+    const { publicKey } = useWallet();
     const { ownership } = useSession();
+    const { profile } = useProfile();
 
     return useMemo(() => {
+        const answered = profile ? countAnswered(profile.matchmaking) : 0;
+        const linkedAddress = profile?.wallet?.address;
         const steps: CompletionStep[] = [
             {
+                id: 'create',
+                label: 'Create your profile',
+                description: 'Your name and role are all you need to start.',
+                done: Boolean(profile),
+                to: '/profile?edit=basics',
+            },
+            {
+                id: 'about',
+                label: 'Describe your work and skills',
+                description: 'A short description plus a few skills.',
+                done: Boolean(profile?.description && profile.skills.length > 0),
+                to: '/profile?edit=basics',
+            },
+            {
+                id: 'matchmaking',
+                label: 'Answer the matchmaking questions',
+                description: `${answered} of 8 answered. Tell the matchmaker who you want to meet.`,
+                done: answered >= 6,
+                to: '/profile?edit=matchmaking',
+            },
+            {
                 id: 'wallet',
-                label: 'Connect a Solana wallet',
-                description: 'Your wallet is your Breakpoint identity.',
-                done: connected,
-                to: '/settings',
+                label: 'Link a Solana wallet',
+                description: 'Attach your wallet address to your profile.',
+                done: Boolean(linkedAddress),
+                to: '/profile',
             },
             {
                 id: 'ownership',
                 label: 'Verify wallet ownership',
                 description: 'Sign a one-time message to prove the wallet is yours.',
-                done: ownership.status === 'verified',
+                done: ownership.status === 'verified' && Boolean(linkedAddress) && publicKey?.toBase58() === linkedAddress,
                 to: '/settings',
-            },
-            {
-                id: 'identity',
-                label: 'Add your name and role',
-                description: 'Help attendees recognise you.',
-                done: false,
-                to: '/profile',
-            },
-            {
-                id: 'bio',
-                label: 'Write a short bio',
-                description: 'A few lines on what you are building.',
-                done: false,
-                to: '/profile',
-            },
-            {
-                id: 'goals',
-                label: 'Set matchmaking goals',
-                description: 'Tell the AI who you want to meet.',
-                done: false,
-                to: '/matchmaking',
             },
         ];
         const completed = steps.filter((s) => s.done).length;
         return { steps, completed, total: steps.length, percent: Math.round((completed / steps.length) * 100) };
-    }, [connected, ownership.status]);
+    }, [profile, ownership.status, publicKey]);
 };
