@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { CalendarClock, Handshake, Layers } from 'lucide-react';
+import { CalendarClock, Layers } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import SurfaceCard from '@/components/common/SurfaceCard';
 import EmptyState from '@/components/common/EmptyState';
@@ -8,6 +8,7 @@ import ProfileCompletionCard from '@/components/overview/ProfileCompletionCard';
 import NextStepsCard from '@/components/overview/NextStepsCard';
 import MatchmakingIntroCard from '@/components/overview/MatchmakingIntroCard';
 import WalletStatusCard from '@/components/wallet/WalletStatusCard';
+import ConnectionsSummaryCard from '@/components/connections/ConnectionsSummaryCard';
 
 /** Overview dashboard. All figures come from real state — empty states until data exists. */
 const Index = () => (
@@ -24,19 +25,7 @@ const Index = () => (
 
         <div className="grid gap-6 lg:grid-cols-3">
             <NextStepsCard className="lg:row-span-2" />
-            <SurfaceCard title="Connections" description="People you’ve connected with.">
-                <EmptyState
-                    compact
-                    icon={Handshake}
-                    title="No connections yet"
-                    description="Connections you make will appear here."
-                    action={
-                        <Button asChild variant="outline" size="sm" className="rounded-lg border-border">
-                            <Link to="/discover">Discover people</Link>
-                        </Button>
-                    }
-                />
-            </SurfaceCard>
+            <ConnectionsSummaryCard />
             <SurfaceCard title="Upcoming meeting" description="Your next scheduled meeting.">
                 <EmptyState
                     compact

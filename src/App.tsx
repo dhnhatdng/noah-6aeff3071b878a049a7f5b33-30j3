@@ -2,6 +2,7 @@ import { Routes, Route } from 'react-router-dom';
 import { Toaster } from '@/components/ui/toaster';
 import SolanaProviders from '@/components/providers/SolanaProviders';
 import ProfileProvider from '@/components/providers/ProfileProvider';
+import ConnectionsProvider from '@/components/providers/ConnectionsProvider';
 import RequireSession from '@/components/auth/RequireSession';
 import AppShell from '@/components/layout/AppShell';
 import NotFound from './pages/NotFound';
@@ -18,6 +19,7 @@ import Settings from './pages/Settings';
 const App = () => (
     <SolanaProviders>
         <ProfileProvider>
+        <ConnectionsProvider>
         <Routes>
             <Route path="/login" element={<Login />} />
             <Route element={<RequireSession />}>
@@ -34,6 +36,7 @@ const App = () => (
             </Route>
             <Route path="*" element={<NotFound />} />
         </Routes>
+        </ConnectionsProvider>
         </ProfileProvider>
         <Toaster />
     </SolanaProviders>

@@ -1,5 +1,7 @@
+import type { ReactNode } from 'react';
 import { Info } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
+import ConnectButton from '@/components/connections/ConnectButton';
 import type { DemoProfile } from '@/lib/profile/types';
 import ProfileHeaderCard from './ProfileHeaderCard';
 import ProfileAboutSection from './ProfileAboutSection';
@@ -8,9 +10,11 @@ import MatchmakingAnswersView from './MatchmakingAnswersView';
 interface ProfileDetailDialogProps {
     profile: DemoProfile | null;
     onOpenChange: (open: boolean) => void;
+    /** Optional extra content shown above the profile details (e.g. match explanation). */
+    children?: ReactNode;
 }
 
-const ProfileDetailDialog = ({ profile, onOpenChange }: ProfileDetailDialogProps) => (
+const ProfileDetailDialog = ({ profile, onOpenChange, children }: ProfileDetailDialogProps) => (
     <Dialog open={Boolean(profile)} onOpenChange={onOpenChange}>
         <DialogContent className="max-h-[90vh] gap-0 overflow-y-auto rounded-2xl border-border bg-card p-0 shadow-raised sm:max-w-3xl">
             {profile && (
@@ -21,7 +25,8 @@ const ProfileDetailDialog = ({ profile, onOpenChange }: ProfileDetailDialogProps
                         DEMO USER — a fictional profile created for testing. Not a real Breakpoint attendee.
                     </DialogDescription>
                     <div className="flex flex-col gap-8 p-6">
-                        <ProfileHeaderCard profile={profile} isDemo plain />
+                        <ProfileHeaderCard profile={profile} isDemo plain actions={<ConnectButton profile={profile} />} />
+                        {children}
                         <section className="flex flex-col gap-4">
                             <h3 className="font-display text-lg font-semibold">About</h3>
                             <ProfileAboutSection profile={profile} />
