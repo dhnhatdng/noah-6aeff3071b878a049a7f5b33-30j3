@@ -1,31 +1,65 @@
-import { WalletMultiButton } from '@solana/wallet-adapter-react-ui';
+import { Link } from 'react-router-dom';
+import { CalendarClock, Handshake, Layers } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import SurfaceCard from '@/components/common/SurfaceCard';
+import EmptyState from '@/components/common/EmptyState';
+import WelcomeCard from '@/components/overview/WelcomeCard';
+import ProfileCompletionCard from '@/components/overview/ProfileCompletionCard';
+import NextStepsCard from '@/components/overview/NextStepsCard';
+import MatchmakingIntroCard from '@/components/overview/MatchmakingIntroCard';
+import WalletStatusCard from '@/components/wallet/WalletStatusCard';
 
-const Index = () => {
-    return (
-        <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', backgroundColor: '#ffffff' }}>
-            <header style={{ display: 'flex', justifyContent: 'flex-end', padding: '16px' }}>
-                <WalletMultiButton
-                    style={{
-                        backgroundColor: '#18181b',
-                        color: '#ffffff',
-                        borderRadius: '8px',
-                        fontSize: '14px',
-                        fontWeight: '400',
-                        height: '38px',
-                        padding: '0 16px',
-                    }}
-                />
-            </header>
-            <main style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', width: '100%' }}>
-                <p style={{ margin: 0, fontSize: '15px', fontWeight: 400, color: '#3a3a3a', letterSpacing: '0.01em', textAlign: 'center' }}>
-                    Start building your Solana app
-                </p>
-                <p style={{ margin: '6px 0 0', fontSize: '13px', fontWeight: 300, color: '#6b6b6b', textAlign: 'center' }}>
-                    Connect your wallet to get started
-                </p>
-            </main>
+/** Overview dashboard. All figures come from real state — empty states until data exists. */
+const Index = () => (
+    <div className="flex flex-col gap-6">
+        <div className="grid gap-6 lg:grid-cols-3">
+            <WelcomeCard className="lg:col-span-2" />
+            <ProfileCompletionCard />
         </div>
-    );
-};
+
+        <div className="grid gap-6 lg:grid-cols-3">
+            <MatchmakingIntroCard className="lg:col-span-2" />
+            <WalletStatusCard />
+        </div>
+
+        <div className="grid gap-6 lg:grid-cols-3">
+            <NextStepsCard className="lg:row-span-2" />
+            <SurfaceCard title="Connections" description="People you’ve connected with.">
+                <EmptyState
+                    compact
+                    icon={Handshake}
+                    title="No connections yet"
+                    description="Connections you make will appear here."
+                    action={
+                        <Button asChild variant="outline" size="sm" className="rounded-lg border-border">
+                            <Link to="/discover">Discover people</Link>
+                        </Button>
+                    }
+                />
+            </SurfaceCard>
+            <SurfaceCard title="Upcoming meeting" description="Your next scheduled meeting.">
+                <EmptyState
+                    compact
+                    icon={CalendarClock}
+                    title="Nothing scheduled"
+                    description="Meetings you book with other attendees will show here."
+                />
+            </SurfaceCard>
+            <SurfaceCard title="Collaboration" description="Projects and shared spaces." className="lg:col-span-2">
+                <EmptyState
+                    compact
+                    icon={Layers}
+                    title="No collaborations yet"
+                    description="Start or join a collaboration to keep building after the event."
+                    action={
+                        <Button asChild variant="outline" size="sm" className="rounded-lg border-border">
+                            <Link to="/collaboration">Open Collaboration Hub</Link>
+                        </Button>
+                    }
+                />
+            </SurfaceCard>
+        </div>
+    </div>
+);
 
 export default Index;

@@ -1,35 +1,39 @@
-import { useMemo } from 'react';
 import { Routes, Route } from 'react-router-dom';
 import { Toaster } from '@/components/ui/toaster';
-import { ConnectionProvider, WalletProvider } from '@solana/wallet-adapter-react';
-import { WalletAdapterNetwork } from '@solana/wallet-adapter-base';
-import { PhantomWalletAdapter } from '@solana/wallet-adapter-wallets';
-import { WalletModalProvider } from '@solana/wallet-adapter-react-ui';
-import { clusterApiUrl } from '@solana/web3.js';
+import SolanaProviders from '@/components/providers/SolanaProviders';
+import RequireSession from '@/components/auth/RequireSession';
+import AppShell from '@/components/layout/AppShell';
 import NotFound from './pages/NotFound';
 import Index from './pages/Index';
+import Login from './pages/Login';
+import Profile from './pages/Profile';
+import Matchmaking from './pages/Matchmaking';
+import Discover from './pages/Discover';
+import LiveEvent from './pages/LiveEvent';
+import Connections from './pages/Connections';
+import Collaboration from './pages/Collaboration';
+import Settings from './pages/Settings';
 
-import '@solana/wallet-adapter-react-ui/styles.css';
-
-const App = () => {
-    const network = WalletAdapterNetwork.Devnet;
-    const endpoint = useMemo(() => clusterApiUrl(network), [network]);
-
-    const wallets = useMemo(() => [new PhantomWalletAdapter()], []);
-
-    return (
-        <ConnectionProvider endpoint={endpoint}>
-            <WalletProvider wallets={wallets} autoConnect>
-                <WalletModalProvider>
-                    <Routes>
-                        <Route path="/" element={<Index />} />
-                        <Route path="*" element={<NotFound />} />
-                    </Routes>
-                    <Toaster />
-                </WalletModalProvider>
-            </WalletProvider>
-        </ConnectionProvider>
-    );
-};
+const App = () => (
+    <SolanaProviders>
+        <Routes>
+            <Route path="/login" element={<Login />} />
+            <Route element={<RequireSession />}>
+                <Route element={<AppShell />}>
+                    <Route path="/" element={<Index />} />
+                    <Route path="/profile" element={<Profile />} />
+                    <Route path="/matchmaking" element={<Matchmaking />} />
+                    <Route path="/discover" element={<Discover />} />
+                    <Route path="/live" element={<LiveEvent />} />
+                    <Route path="/connections" element={<Connections />} />
+                    <Route path="/collaboration" element={<Collaboration />} />
+                    <Route path="/settings" element={<Settings />} />
+                </Route>
+            </Route>
+            <Route path="*" element={<NotFound />} />
+        </Routes>
+        <Toaster />
+    </SolanaProviders>
+);
 
 export default App;
