@@ -10,7 +10,7 @@ const MatchmakingIntroCard = ({ className }: { className?: string }) => (
                 <Sparkles className="h-6 w-6" aria-hidden />
             </span>
             <div className="flex-1">
-                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-primary-strong">AI Matchmaking</p>
+                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-primary-strong">Smart Matchmaking</p>
                 <h2 className="mt-1.5 text-2xl font-semibold leading-tight">Introductions that are actually relevant</h2>
                 <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
                     Tell us what you’re building and who you want to meet. The matchmaker will suggest attendees whose

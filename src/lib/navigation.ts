@@ -25,7 +25,7 @@ export const NAV_ITEMS: NavItem[] = [
     { key: 'profile', label: 'My Profile', path: '/profile', icon: UserRound, description: 'How attendees see you' },
     {
         key: 'matchmaking',
-        label: 'AI Matchmaking',
+        label: 'Smart Matchmaking',
         path: '/matchmaking',
         icon: Sparkles,
         description: 'Curated introductions',

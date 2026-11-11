@@ -23,4 +23,6 @@ cache
 # OS files
 .DS_Store
 
-
+# Environment files (may contain RPC keys)
+.env
+.env.local

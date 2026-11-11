@@ -172,7 +172,7 @@ const Connections = () => {
                             <EmptyState
                                 icon={Send}
                                 title="No requests sent"
-                                description="Send requests from AI Matchmaking or Discover People."
+                                description="Send requests from Smart Matchmaking or Discover People."
                                 action={
                                     <Button asChild size="sm" className="rounded-lg">
                                         <Link to="/matchmaking">See your matches</Link>

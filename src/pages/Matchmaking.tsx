@@ -172,7 +172,7 @@ const MatchResults = () => {
 const Matchmaking = () => (
     <div className="flex flex-col gap-8">
         <PageHeader
-            eyebrow="AI Matchmaking"
+            eyebrow="Smart Matchmaking"
             title="Curated introductions"
             description="Matchmaking turns your profile and goals into a short list of people worth meeting."
             actions={
