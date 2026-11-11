@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useWalletModal } from '@solana/wallet-adapter-react-ui';
 import { Eye, KeyRound, Network, ShieldCheck, Wallet } from 'lucide-react';
@@ -193,6 +193,12 @@ const Login = () => {
                         </div>
 
                         <SecurityNote className="mt-8 border-t border-border pt-5" />
+
+                        <p className="mt-4 text-center text-xs text-muted-foreground">
+                            <Link to="/privacy" className="hover:text-foreground hover:underline">
+                                Privacy Policy
+                            </Link>
+                        </p>
                     </motion.div>
                 </div>
             </main>

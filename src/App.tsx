@@ -8,6 +8,7 @@ import AppShell from '@/components/layout/AppShell';
 import NotFound from './pages/NotFound';
 import Index from './pages/Index';
 import Login from './pages/Login';
+import Privacy from './pages/Privacy';
 import Profile from './pages/Profile';
 import Matchmaking from './pages/Matchmaking';
 import Discover from './pages/Discover';
@@ -24,6 +25,8 @@ const App = () => (
         <ConnectionsProvider>
         <Routes>
             <Route path="/login" element={<Login />} />
+            {/* Public: Google requires a public privacy-policy URL for the OAuth consent screen. */}
+            <Route path="/privacy" element={<Privacy />} />
             <Route element={<RequireSession />}>
                 <Route element={<AppShell />}>
                     <Route path="/" element={<Index />} />
