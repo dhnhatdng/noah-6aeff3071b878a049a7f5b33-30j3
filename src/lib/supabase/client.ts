@@ -12,7 +12,11 @@ import { SUPABASE_ANON_KEY, SUPABASE_URL } from '@/lib/config';
 export const supabase: SupabaseClient | null =
     SUPABASE_URL && SUPABASE_ANON_KEY
         ? createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-              auth: { persistSession: true, autoRefreshToken: true },
+              // PKCE flow: the OAuth callback carries only a short-lived code
+              // (?code=...) which the client exchanges for a session. The old
+              // implicit flow put the access + refresh tokens in the URL
+              // fragment (#access_token=...), visible in browser history.
+              auth: { persistSession: true, autoRefreshToken: true, flowType: 'pkce' },
           })
         : null;
 
