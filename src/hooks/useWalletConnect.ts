@@ -49,7 +49,9 @@ export const useWalletConnect = () => {
                 }
                 return;
             }
-            // Selecting a wallet triggers the adapter's approval prompt (autoConnect on user selection).
+            // Selecting a wallet triggers a connect via ConnectAfterSelect
+            // (SolanaProviders): the stock modal only selects, and there
+            // is no autoConnect, so nothing connects without that effect.
             select(name as WalletName);
         },
         [options, wallet, connect, select, clearWalletError, setWalletError],
