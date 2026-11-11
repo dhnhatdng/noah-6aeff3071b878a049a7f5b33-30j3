@@ -1,6 +1,7 @@
 // MUST be the first import to ensure Buffer is available globally
 import './polyfills';
 import './index.css';
+import '@solana/wallet-adapter-react-ui/styles.css';
 import { createRoot } from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
 

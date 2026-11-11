@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { GUEST_MODE_ENABLED } from '@/lib/config';
+import { supabase } from '@/lib/supabase/client';
 import { SessionContext, type OwnershipState, type SessionContextValue } from '@/lib/sessionContext';
 import { authenticateWallet } from '@/lib/walletAuth';
 import { shortenAddress } from '@/lib/wallet';
@@ -23,7 +24,28 @@ const SessionProvider = ({ children, walletError, setWalletError }: SessionProvi
     );
     const [ownership, setOwnership] = useState<OwnershipState>({ status: 'unverified' });
     const [connectDialogOpen, setConnectDialogOpen] = useState(false);
+    const [supabaseUserId, setSupabaseUserId] = useState<string | null>(null);
     const wasConnected = useRef(connected);
+
+    // Track a real (non-anonymous) Supabase Auth session — e.g. Google OAuth.
+    // supabase-js exchanges the OAuth `code` in the URL automatically on
+    // client init, and onAuthStateChange fires SIGNED_IN afterwards, so the
+    // Login page only needs to watch this value to redirect after Google.
+    useEffect(() => {
+        if (!supabase) return;
+        let mounted = true;
+        const applySession = (user: { id: string; is_anonymous?: boolean } | null) => {
+            if (mounted) setSupabaseUserId(user && !user.is_anonymous ? user.id : null);
+        };
+        supabase.auth.getSession().then(({ data: { session } }) => applySession(session?.user ?? null));
+        const {
+            data: { subscription },
+        } = supabase.auth.onAuthStateChange((_event, session) => applySession(session?.user ?? null));
+        return () => {
+            mounted = false;
+            subscription.unsubscribe();
+        };
+    }, []);
 
     // Reset ownership proof whenever the wallet address changes.
     useEffect(() => {
@@ -89,12 +111,13 @@ const SessionProvider = ({ children, walletError, setWalletError }: SessionProvi
             isGuest,
             enterGuestMode,
             exitGuestMode,
+            supabaseUserId,
             ownership,
             verifyOwnership,
             connectDialogOpen,
             setConnectDialogOpen,
         }),
-        [walletError, setWalletError, isGuest, enterGuestMode, exitGuestMode, ownership, verifyOwnership, connectDialogOpen],
+        [walletError, setWalletError, isGuest, enterGuestMode, exitGuestMode, supabaseUserId, ownership, verifyOwnership, connectDialogOpen],
     );
 
     return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>;

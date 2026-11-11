@@ -1,19 +1,21 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Eye, KeyRound, Network, ShieldCheck } from 'lucide-react';
+import { useWalletModal } from '@solana/wallet-adapter-react-ui';
+import { Eye, KeyRound, Network, ShieldCheck, Wallet } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import BrandLogo from '@/components/layout/BrandLogo';
-import WalletOptionList from '@/components/wallet/WalletOptionList';
 import NetworkBadge from '@/components/wallet/NetworkBadge';
 import SecurityNote from '@/components/wallet/SecurityNote';
 import StatusPill from '@/components/common/StatusPill';
 import { useWalletConnect } from '@/hooks/useWalletConnect';
 import { useSession } from '@/hooks/useSession';
+import { toast } from '@/hooks/use-toast';
 import { GOOGLE_AUTH_ENABLED, GUEST_MODE_ENABLED, NETWORK_LABELS, SOLANA_NETWORK } from '@/lib/config';
+import { isSupabaseConfigured, supabase } from '@/lib/supabase/client';
 
 const principles = [
-    { icon: KeyRound, title: 'Your wallet is your identity', body: 'Sign in with Phantom or Solflare — no passwords.' },
+    { icon: KeyRound, title: 'Your wallet is your identity', body: 'Sign in with your Solana wallet — no passwords.' },
     { icon: ShieldCheck, title: 'Never your keys', body: 'We will never ask for a seed phrase or private key.' },
     {
         icon: Network,
@@ -30,14 +32,36 @@ const GoogleMark = () => (
 
 const Login = () => {
     const { connected } = useWalletConnect();
-    const { enterGuestMode } = useSession();
+    const { enterGuestMode, supabaseUserId } = useSession();
+    const { setVisible } = useWalletModal();
+    const [googleLoading, setGoogleLoading] = useState(false);
     const navigate = useNavigate();
     const location = useLocation();
     const from = (location.state as { from?: { pathname: string } } | null)?.from?.pathname ?? '/';
 
+    // Google sign-in is only offered when the OAuth provider is configured
+    // (env flag) and Supabase is connected; otherwise the button stays
+    // disabled with an honest "Not set up yet" label.
+    const googleReady = GOOGLE_AUTH_ENABLED && isSupabaseConfigured();
+
     useEffect(() => {
-        if (connected) navigate(from, { replace: true });
-    }, [connected, from, navigate]);
+        if (connected || supabaseUserId) navigate(from, { replace: true });
+    }, [connected, supabaseUserId, from, navigate]);
+
+    const signInWithGoogle = async () => {
+        if (!googleReady || !supabase || googleLoading) return;
+        setGoogleLoading(true);
+        const { error } = await supabase.auth.signInWithOAuth({
+            provider: 'google',
+            options: { redirectTo: `${window.location.origin}/login` },
+        });
+        if (error) {
+            setGoogleLoading(false);
+            toast({ title: 'Google sign-in failed', description: error.message, variant: 'destructive' });
+        }
+        // On success the browser leaves for Google; the Supabase session is
+        // picked up automatically on the redirect back to /login.
+    };
 
     return (
         <div className="grid min-h-screen lg:grid-cols-[1.05fr_1fr]">
@@ -120,7 +144,17 @@ const Login = () => {
                         </p>
 
                         <div className="mt-8">
-                            <WalletOptionList />
+                            <Button
+                                className="h-12 w-full rounded-2xl text-base font-semibold"
+                                onClick={() => setVisible(true)}
+                            >
+                                <Wallet className="h-5 w-5" aria-hidden />
+                                Connect Wallet
+                            </Button>
+                            <p className="mt-3 text-center text-sm text-muted-foreground">
+                                Choose your Solana wallet in the next step — Phantom, Solflare, and other detected
+                                wallets.
+                            </p>
                         </div>
 
                         <div className="my-7 flex items-center gap-4 text-xs uppercase tracking-[0.16em] text-muted-foreground">
@@ -132,14 +166,15 @@ const Login = () => {
                         <div className="flex flex-col gap-3">
                             <Button
                                 variant="outline"
-                                disabled={!GOOGLE_AUTH_ENABLED}
+                                disabled={!googleReady || googleLoading}
+                                onClick={signInWithGoogle}
                                 className="h-12 justify-between rounded-2xl border-border bg-card px-4"
                             >
                                 <span className="flex items-center gap-3">
                                     <GoogleMark />
-                                    Continue with Google
+                                    {googleLoading ? 'Redirecting to Google…' : 'Continue with Google'}
                                 </span>
-                                {!GOOGLE_AUTH_ENABLED && <StatusPill>Backend required</StatusPill>}
+                                {!googleReady && <StatusPill>Not set up yet</StatusPill>}
                             </Button>
 
                             {GUEST_MODE_ENABLED && (

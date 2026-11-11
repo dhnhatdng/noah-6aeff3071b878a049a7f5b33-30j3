@@ -18,6 +18,13 @@ export interface SessionContextValue {
     isGuest: boolean;
     enterGuestMode: () => void;
     exitGuestMode: () => void;
+    /**
+     * Id of the signed-in Supabase Auth user, when the session belongs to a
+     * real (non-anonymous) identity — e.g. Google OAuth. Null otherwise.
+     * Anonymous sessions do NOT count: they are created implicitly by the
+     * data layer and must never open the app on their own.
+     */
+    supabaseUserId: string | null;
     ownership: OwnershipState;
     verifyOwnership: () => Promise<void>;
     connectDialogOpen: boolean;

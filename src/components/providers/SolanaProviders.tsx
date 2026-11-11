@@ -1,5 +1,6 @@
 import { useCallback, useMemo, useState, type ReactNode } from 'react';
 import { ConnectionProvider, WalletProvider } from '@solana/wallet-adapter-react';
+import { WalletModalProvider } from '@solana/wallet-adapter-react-ui';
 import type { WalletError } from '@solana/wallet-adapter-base';
 import { PhantomWalletAdapter, SolflareWalletAdapter } from '@solana/wallet-adapter-wallets';
 import { SOLANA_NETWORK, SOLANA_RPC_ENDPOINT } from '@/lib/config';
@@ -27,9 +28,11 @@ const SolanaProviders = ({ children }: { children: ReactNode }) => {
     return (
         <ConnectionProvider endpoint={SOLANA_RPC_ENDPOINT}>
             <WalletProvider wallets={wallets} onError={onError} autoConnect>
-                <SessionProvider walletError={walletError} setWalletError={setWalletError}>
-                    {children}
-                </SessionProvider>
+                <WalletModalProvider>
+                    <SessionProvider walletError={walletError} setWalletError={setWalletError}>
+                        {children}
+                    </SessionProvider>
+                </WalletModalProvider>
             </WalletProvider>
         </ConnectionProvider>
     );

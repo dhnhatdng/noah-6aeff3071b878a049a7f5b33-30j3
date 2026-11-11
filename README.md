@@ -45,6 +45,7 @@ real key — `.env` and `.env.local` are git-ignored.
 | `VITE_ENABLE_GUEST_MODE` | `true` | `false` requires a wallet connection for app access. |
 | `VITE_SUPABASE_URL` | *(empty — demo mode)* | Supabase project URL. With `VITE_SUPABASE_ANON_KEY` enables live mode. |
 | `VITE_SUPABASE_ANON_KEY` | *(empty — demo mode)* | Supabase **public anon key only** — never a service-role key. |
+| `VITE_GOOGLE_AUTH_ENABLED` | `false` | `true` enables the "Continue with Google" button — requires the Google sign-in setup below. |
 | `VITE_AUTH_API_URL` | *(empty)* | Auth backend for nonce/verify — pending, not configured. |
 
 ### Supabase setup
@@ -74,6 +75,33 @@ only) — it will not error, it just will not share data between users.
    git-ignored.
 6. Restart `npm run dev`. The top bar shows "Connected — Supabase"
    instead of "Demo mode".
+
+### Google sign-in (optional)
+
+The "Continue with Google" button is code-ready but disabled by default
+("Not set up yet") — it needs a Google OAuth client, which only the
+project owner can create. No Google credentials exist in this repo.
+
+1. **Google Cloud Console** ([console.cloud.google.com](https://console.cloud.google.com)):
+   create/select a project → **APIs & Services → Credentials** → **Create
+   Credentials → OAuth client ID** → application type **Web application**.
+   Add the authorized redirect URI
+   `https://<your-project-ref>.supabase.co/auth/v1/callback`
+   (replace `<your-project-ref>` with the subdomain of your Supabase
+   project URL). Note the **Client ID** and **Client Secret**.
+2. **Supabase Dashboard → Authentication → Providers → Google:** enable
+   the provider and paste the Client ID + Client Secret from step 1.
+3. **Supabase Dashboard → Authentication → URL Configuration:** add your
+   app's login URL to **Redirect URLs**, e.g.
+   `https://<your-vercel-domain>/login` (and
+   `http://localhost:5173/login` for local development).
+4. **Enable it in the app:** set `VITE_GOOGLE_AUTH_ENABLED=true` in
+   `.env` locally, or in Vercel (Project → Settings → Environment
+   Variables) and redeploy. The button becomes clickable and starts the
+   Google flow; after Google redirects back to `/login`, the Supabase
+   session is picked up automatically and the user is signed in with the
+   Google identity as their profile owner (a wallet can still be linked
+   later from Settings).
 
 > **Security note:** an earlier `.env` containing a `VITE_SOLANA_RPC_URL`
 > key was committed to public git history (under the old, wrong key name

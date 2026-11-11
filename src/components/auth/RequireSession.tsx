@@ -4,15 +4,17 @@ import { Loader2 } from 'lucide-react';
 import { useSession } from '@/hooks/useSession';
 
 /**
- * App access requires a real wallet connection, or an explicitly enabled guest/demo session.
+ * App access requires a real wallet connection, an explicitly enabled
+ * guest/demo session, or a real (non-anonymous) Supabase Auth session
+ * (e.g. Google OAuth). Anonymous Supabase sessions do not open the gate.
  * Note: this gates UI access only. Ownership proof (signed nonce) is a separate, pending step.
  */
 const RequireSession = () => {
     const { connected, connecting } = useWallet();
-    const { isGuest } = useSession();
+    const { isGuest, supabaseUserId } = useSession();
     const location = useLocation();
 
-    if (connected || isGuest) return <Outlet />;
+    if (connected || isGuest || supabaseUserId) return <Outlet />;
 
     if (connecting) {
         return (

@@ -10,6 +10,7 @@ import { clusterApiUrl } from '@solana/web3.js';
  *   VITE_SOLANA_RPC_URL     optional custom RPC (recommended for mainnet)
  *   VITE_AUTH_API_URL       base URL of the nonce/verify auth backend (pending)
  *   VITE_ENABLE_GUEST_MODE  "true" | "false" — explicit guest/demo access
+ *   VITE_GOOGLE_AUTH_ENABLED "true" | "false" — Google OAuth via Supabase (see README)
  */
 
 export const APP_NAME = 'Breakpoint Connect';
@@ -67,8 +68,13 @@ export const SUPABASE_CONFIGURED: boolean = Boolean(SUPABASE_URL && SUPABASE_ANO
 const guestEnv = import.meta.env.VITE_ENABLE_GUEST_MODE;
 export const GUEST_MODE_ENABLED: boolean = guestEnv ? guestEnv === 'true' : !SUPABASE_CONFIGURED;
 
-/** Google sign-in requires a connected auth backend (e.g. Supabase). Not yet configured. */
-export const GOOGLE_AUTH_ENABLED = false;
+/**
+ * Google sign-in (Supabase OAuth) is opt-in: it needs a Google OAuth client
+ * configured in Google Cloud + Supabase (see README "Google sign-in"), and
+ * VITE_GOOGLE_AUTH_ENABLED=true. Until then the button stays disabled with
+ * an honest "Not set up yet" label. No Google credentials exist in the repo.
+ */
+export const GOOGLE_AUTH_ENABLED: boolean = import.meta.env.VITE_GOOGLE_AUTH_ENABLED === 'true';
 
 export const explorerAddressUrl = (address: string): string => {
     const cluster = SOLANA_NETWORK === WalletAdapterNetwork.Mainnet ? '' : `?cluster=${SOLANA_NETWORK}`;
