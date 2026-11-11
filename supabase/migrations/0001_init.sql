@@ -161,15 +161,30 @@ create table if not exists public.collaboration_members (
 );
 create index if not exists collaboration_members_user_id_idx on public.collaboration_members (user_id);
 
+-- Breaks the RLS recursion between collaborations and collaboration_members:
+-- the collaborations policy used to query collaboration_members, whose own
+-- policy queries collaborations, so Postgres reported "infinite recursion".
+-- This SECURITY DEFINER helper checks membership bypassing RLS (it only
+-- ever answers about the caller's own auth.uid()).
+create or replace function public.is_collaboration_member(p_collaboration_id uuid)
+returns boolean
+language sql
+security definer
+stable
+as $$
+    select exists (
+        select 1 from public.collaboration_members m
+        where m.collaboration_id = p_collaboration_id
+          and m.user_id = auth.uid()
+    );
+$$;
+
 alter table public.collaborations enable row level security;
 drop policy if exists "collaborations_members_read" on public.collaborations;
 create policy "collaborations_members_read" on public.collaborations
     for select using (
         auth.uid() = owner_id
-        or exists (
-            select 1 from public.collaboration_members m
-            where m.collaboration_id = collaborations.id and m.user_id = auth.uid()
-        )
+        or public.is_collaboration_member(collaborations.id)
     );
 drop policy if exists "collaborations_owner_insert" on public.collaborations;
 create policy "collaborations_owner_insert" on public.collaborations
@@ -229,10 +244,7 @@ create policy "collaboration_notes_members_read" on public.collaboration_notes
             where c.id = collaboration_notes.collaboration_id
             and (
                 c.owner_id = auth.uid()
-                or exists (
-                    select 1 from public.collaboration_members m
-                    where m.collaboration_id = c.id and m.user_id = auth.uid()
-                )
+                or public.is_collaboration_member(c.id)
             )
         )
     );
@@ -245,10 +257,7 @@ create policy "collaboration_notes_author_insert" on public.collaboration_notes
             where c.id = collaboration_notes.collaboration_id
             and (
                 c.owner_id = auth.uid()
-                or exists (
-                    select 1 from public.collaboration_members m
-                    where m.collaboration_id = c.id and m.user_id = auth.uid()
-                )
+                or public.is_collaboration_member(c.id)
             )
         )
     );
