@@ -1,6 +1,8 @@
 import { useRef, useState, type ChangeEvent } from 'react';
 import { ImagePlus, Loader2, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { getAnonUserId, isSupabaseConfigured } from '@/lib/supabase/client';
+import { uploadPhoto } from '@/lib/supabase/avatars';
 import ProfileAvatar from './ProfileAvatar';
 
 const MAX_BYTES = 5 * 1024 * 1024;
@@ -60,6 +62,19 @@ const PhotoUpload = ({ value, name, onChange }: PhotoUploadProps) => {
         if (file.size > MAX_BYTES) return setError('Image must be 5 MB or smaller.');
         setBusy(true);
         try {
+            // Live mode: upload to the Supabase `avatars` bucket and store the
+            // public URL. Demo mode (or no anonymous id yet): keep the existing
+            // base64-in-localStorage behaviour exactly as before.
+            if (isSupabaseConfigured()) {
+                const userId = await getAnonUserId();
+                if (userId) {
+                    const url = await uploadPhoto(file, userId);
+                    if (url) {
+                        onChange(url);
+                        return;
+                    }
+                }
+            }
             onChange(await toResizedDataUrl(file));
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Upload failed.');
@@ -102,7 +117,11 @@ const PhotoUpload = ({ value, name, onChange }: PhotoUploadProps) => {
                         {error}
                     </p>
                 ) : (
-                    <p className="text-xs text-muted-foreground">PNG, JPG or WebP up to 5 MB. Cropped to a square.</p>
+                    <p className="text-xs text-muted-foreground">
+                        {isSupabaseConfigured()
+                            ? 'PNG, JPG or WebP up to 5 MB. Stored in your Supabase project.'
+                            : 'PNG, JPG or WebP up to 5 MB. Cropped to a square.'}
+                    </p>
                 )}
                 <input ref={inputRef} type="file" accept={ACCEPTED.join(',')} className="hidden" onChange={onFile} />
             </div>

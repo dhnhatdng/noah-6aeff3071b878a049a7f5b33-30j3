@@ -1,7 +1,9 @@
 import {
+    CalendarClock,
     Handshake,
     Layers,
     LayoutGrid,
+    MessageSquare,
     Radio,
     Settings,
     Sparkles,
@@ -25,7 +27,7 @@ export const NAV_ITEMS: NavItem[] = [
     { key: 'profile', label: 'My Profile', path: '/profile', icon: UserRound, description: 'How attendees see you' },
     {
         key: 'matchmaking',
-        label: 'AI Matchmaking',
+        label: 'Smart Matchmaking',
         path: '/matchmaking',
         icon: Sparkles,
         description: 'Curated introductions',
@@ -41,6 +43,8 @@ export const NAV_ITEMS: NavItem[] = [
     },
     { key: 'live', label: 'Live Event', path: '/live', icon: Radio, description: 'Schedule & check-in', mobileTab: true },
     { key: 'connections', label: 'Connections', path: '/connections', icon: Handshake, description: 'Your network' },
+    { key: 'messages', label: 'Messages', path: '/messages', icon: MessageSquare, description: 'Conversations' },
+    { key: 'meetings', label: 'Meetings', path: '/meetings', icon: CalendarClock, description: 'Booked meetings' },
     {
         key: 'collaboration',
         label: 'Collaboration Hub',

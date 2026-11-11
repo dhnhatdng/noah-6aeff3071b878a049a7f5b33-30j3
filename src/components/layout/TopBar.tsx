@@ -2,6 +2,7 @@ import { Menu } from 'lucide-react';
 import { useLocation } from 'react-router-dom';
 import { findNavItem } from '@/lib/navigation';
 import BrandLogo from './BrandLogo';
+import DataModeBadge from '@/components/common/DataModeBadge';
 import NetworkBadge from '@/components/wallet/NetworkBadge';
 import WalletButton from '@/components/wallet/WalletButton';
 
@@ -29,6 +30,7 @@ const TopBar = ({ onOpenMenu }: { onOpenMenu: () => void }) => {
                     </p>
                 )}
                 <div className="ml-auto flex items-center gap-2">
+                    <DataModeBadge className="hidden sm:inline-flex" />
                     <NetworkBadge className="hidden sm:inline-flex" />
                     <WalletButton />
                 </div>

@@ -5,6 +5,10 @@ export type OwnershipStatus = 'unverified' | 'verifying' | 'verified' | 'error';
 export interface OwnershipState {
     status: OwnershipStatus;
     message?: string;
+    /** Wallet address proven by signature (client-side SIWS; see walletAuth.ts). */
+    address?: string;
+    /** ISO timestamp of the successful verification. */
+    verifiedAt?: string;
 }
 
 export interface SessionContextValue {

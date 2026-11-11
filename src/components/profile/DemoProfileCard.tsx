@@ -1,11 +1,14 @@
 import { MapPin } from 'lucide-react';
 import { demoCategoryLabel } from '@/lib/profile/options';
-import type { DemoProfile } from '@/lib/profile/types';
+import type { DemoProfile, UserProfile } from '@/lib/profile/types';
 import ProfileAvatar from './ProfileAvatar';
 import DemoUserBadge from './DemoUserBadge';
 import ChipList from './ChipList';
 
-const DemoProfileCard = ({ profile, onOpen }: { profile: DemoProfile; onOpen: () => void }) => (
+/** Card for one attendee: a demo profile in demo mode, a real profile when live. */
+const DemoProfileCard = ({ profile, onOpen }: { profile: DemoProfile | UserProfile; onOpen: () => void }) => {
+    const isDemo = profile.kind === 'demo';
+    return (
     <button
         type="button"
         onClick={onOpen}
@@ -24,12 +27,13 @@ const DemoProfileCard = ({ profile, onOpen }: { profile: DemoProfile; onOpen: ()
             </div>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-            <DemoUserBadge />
-            <span className="text-xs text-muted-foreground">{demoCategoryLabel(profile.category)}</span>
+            {isDemo && <DemoUserBadge />}
+            {isDemo && <span className="text-xs text-muted-foreground">{demoCategoryLabel(profile.category)}</span>}
         </div>
         <p className="line-clamp-3 text-sm leading-relaxed text-muted-foreground">{profile.description}</p>
         <ChipList items={profile.skills} limit={3} className="mt-auto" />
     </button>
-);
+    );
+};
 
 export default DemoProfileCard;

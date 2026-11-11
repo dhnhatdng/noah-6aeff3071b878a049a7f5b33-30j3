@@ -13,6 +13,8 @@ import Matchmaking from './pages/Matchmaking';
 import Discover from './pages/Discover';
 import LiveEvent from './pages/LiveEvent';
 import Connections from './pages/Connections';
+import Messages from './pages/Messages';
+import Meetings from './pages/Meetings';
 import Collaboration from './pages/Collaboration';
 import Settings from './pages/Settings';
 
@@ -30,6 +32,8 @@ const App = () => (
                     <Route path="/discover" element={<Discover />} />
                     <Route path="/live" element={<LiveEvent />} />
                     <Route path="/connections" element={<Connections />} />
+                    <Route path="/messages" element={<Messages />} />
+                    <Route path="/meetings" element={<Meetings />} />
                     <Route path="/collaboration" element={<Collaboration />} />
                     <Route path="/settings" element={<Settings />} />
                 </Route>

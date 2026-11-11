@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } fro
 import { useWallet } from '@solana/wallet-adapter-react';
 import { GUEST_MODE_ENABLED } from '@/lib/config';
 import { SessionContext, type OwnershipState, type SessionContextValue } from '@/lib/sessionContext';
-import { authenticateWallet, isBackendAuthConfigured } from '@/lib/walletAuth';
+import { authenticateWallet } from '@/lib/walletAuth';
 import { shortenAddress } from '@/lib/wallet';
 import { toast } from '@/hooks/use-toast';
 
@@ -23,13 +23,10 @@ const SessionProvider = ({ children, walletError, setWalletError }: SessionProvi
     );
     const [ownership, setOwnership] = useState<OwnershipState>({ status: 'unverified' });
     const [connectDialogOpen, setConnectDialogOpen] = useState(false);
-    // In-memory only — session tokens must never be persisted to localStorage.
-    const sessionTokenRef = useRef<string | null>(null);
     const wasConnected = useRef(connected);
 
     // Reset ownership proof whenever the wallet address changes.
     useEffect(() => {
-        sessionTokenRef.current = null;
         setOwnership({ status: 'unverified' });
     }, [address]);
 
@@ -65,22 +62,17 @@ const SessionProvider = ({ children, walletError, setWalletError }: SessionProvi
             setOwnership({ status: 'error', message: 'Connect a wallet first.' });
             return;
         }
-        if (!isBackendAuthConfigured()) {
-            setOwnership({
-                status: 'error',
-                message: 'The verification backend is not configured yet, so ownership cannot be proven.',
-            });
-            return;
-        }
         if (!signMessage) {
             setOwnership({ status: 'error', message: 'This wallet does not support message signing.' });
             return;
         }
         setOwnership({ status: 'verifying' });
         try {
-            const { token } = await authenticateWallet({ address, signMessage });
-            sessionTokenRef.current = token;
-            setOwnership({ status: 'verified' });
+            // Client-side SIWS: the signature is verified in this browser and
+            // the result is written to the Supabase profile row when one exists.
+            // No session token is issued (see walletAuth.ts before relying on this).
+            const { verifiedAt } = await authenticateWallet({ address, signMessage });
+            setOwnership({ status: 'verified', address, verifiedAt });
         } catch (error) {
             setOwnership({
                 status: 'error',

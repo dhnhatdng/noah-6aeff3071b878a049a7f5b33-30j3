@@ -1,4 +1,4 @@
-import type { DemoProfile, ProfileData } from '@/lib/profile/types';
+import type { DemoProfile, ProfileData, UserProfile } from '@/lib/profile/types';
 
 /**
  * DEMO MATCHING — a deterministic weighted scoring model. No AI service is involved.
@@ -25,7 +25,8 @@ export type MatchCategory =
     | 'Ecosystem & Community';
 
 export interface MatchResult {
-    profile: DemoProfile;
+    /** A demo profile in demo mode, a real attendee profile when live. */
+    profile: DemoProfile | UserProfile;
     rank: number;
     score: number;
     breakdown: Record<ScoreKey, number>;
@@ -253,7 +254,7 @@ const categorise = (u: ProfileData, c: ProfileData): MatchCategory => {
     return is(c, 'Developer') ? 'Technical Partner' : 'Business Development';
 };
 
-const buildResult = (u: ProfileData, c: DemoProfile, a: Analysis, score: number, index: number): MatchResult => {
+const buildResult = (u: ProfileData, c: DemoProfile | UserProfile, a: Analysis, score: number, index: number): MatchResult => {
     const name = firstName(c);
     const um = u.matchmaking;
     const cm = c.matchmaking;
@@ -357,7 +358,7 @@ const buildResult = (u: ProfileData, c: DemoProfile, a: Analysis, score: number,
  * Scores every eligible candidate against the user and returns the top `limit`.
  * Excludes the user themself, duplicates (same id or same name + organisation) and incomplete profiles.
  */
-export const rankMatches = (user: Profileish, candidates: DemoProfile[], limit = 5): MatchRanking => {
+export const rankMatches = (user: Profileish, candidates: Array<DemoProfile | UserProfile>, limit = 5): MatchRanking => {
     const selfKey = identityKey(user);
     const seen = new Set<string>();
     let excludedCount = 0;

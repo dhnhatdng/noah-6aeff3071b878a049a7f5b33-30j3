@@ -15,7 +15,7 @@ const MatchCard = ({ match, onOpen }: { match: MatchResult; onOpen: () => void }
                 <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2">
                         <h3 className="font-display text-lg font-semibold leading-tight">{p.fullName}</h3>
-                        <DemoUserBadge />
+                        {p.kind === 'demo' && <DemoUserBadge />}
                     </div>
                     <p className="mt-0.5 text-sm">{p.role}</p>
                     <p className="text-sm text-muted-foreground">{p.organization}</p>

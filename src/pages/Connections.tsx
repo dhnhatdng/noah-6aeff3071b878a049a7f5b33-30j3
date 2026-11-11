@@ -1,6 +1,6 @@
 import { useMemo, useState, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
-import { Check, Handshake, Inbox, Info, Send, UserRoundPlus, X } from 'lucide-react';
+import { CalendarClock, Check, Handshake, Inbox, Info, MessageSquare, Send, UserRoundPlus, X } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -11,11 +11,13 @@ import StatusPill from '@/components/common/StatusPill';
 import ProfileAvatar from '@/components/profile/ProfileAvatar';
 import DemoUserBadge from '@/components/profile/DemoUserBadge';
 import ProfileDetailDialog from '@/components/profile/ProfileDetailDialog';
+import MeetingForm from '@/components/meetings/MeetingForm';
 import { useConnections } from '@/hooks/useConnections';
+import { useMeetings } from '@/hooks/useMeetings';
 import { useProfile } from '@/hooks/useProfile';
 import { toast } from '@/hooks/use-toast';
 import { findDemoProfile, type ConnectionRecord } from '@/lib/connections/store';
-import type { DemoProfile } from '@/lib/profile/types';
+import type { DemoProfile, UserProfile } from '@/lib/profile/types';
 
 const tabTrigger =
     'rounded-lg px-3 py-1.5 text-sm data-[state=active]:bg-card data-[state=active]:text-foreground data-[state=active]:shadow-card sm:px-4';
@@ -24,7 +26,8 @@ const when = (iso: string) => new Date(iso).toLocaleDateString(undefined, { date
 
 interface Row {
     record: ConnectionRecord;
-    person: DemoProfile;
+    /** A demo profile in demo mode, a real attendee profile when live. */
+    person: DemoProfile | UserProfile;
 }
 
 const PersonRow = ({ row, meta, onOpen, actions }: { row: Row; meta: ReactNode; onOpen: () => void; actions?: ReactNode }) => (
@@ -34,7 +37,7 @@ const PersonRow = ({ row, meta, onOpen, actions }: { row: Row; meta: ReactNode; 
             <span className="min-w-0">
                 <span className="flex flex-wrap items-center gap-2">
                     <span className="font-medium hover:underline">{row.person.fullName}</span>
-                    <DemoUserBadge />
+                    {row.person.kind === 'demo' && <DemoUserBadge />}
                 </span>
                 <span className="block truncate text-sm text-muted-foreground">
                     {row.person.role} · {row.person.organization}
@@ -48,12 +51,16 @@ const PersonRow = ({ row, meta, onOpen, actions }: { row: Row; meta: ReactNode; 
 
 const Connections = () => {
     const { profile, status } = useProfile();
-    const { records, acceptRequest, declineRequest } = useConnections();
-    const [selected, setSelected] = useState<DemoProfile | null>(null);
+    const { records, acceptRequest, declineRequest, isLive, profileForOwnerId } = useConnections();
+    const { proposeMeeting } = useMeetings();
+    const [selected, setSelected] = useState<DemoProfile | UserProfile | null>(null);
+    const [meetingTarget, setMeetingTarget] = useState<Row | null>(null);
 
     const { received, sent, connected } = useMemo(() => {
+        // Live: the record's counterpart id is an auth user id, resolved to a
+        // real profile. Demo: it is a demo profile id.
         const rows = records.flatMap((record) => {
-            const person = findDemoProfile(record.counterpartId);
+            const person = isLive ? profileForOwnerId(record.counterpartId) : findDemoProfile(record.counterpartId);
             return person ? [{ record, person }] : [];
         });
         const newest = (a: Row, b: Row) => b.record.updatedAt.localeCompare(a.record.updatedAt);
@@ -62,12 +69,12 @@ const Connections = () => {
             sent: rows.filter((r) => r.record.status === 'pending' && r.record.direction === 'sent').sort(newest),
             connected: rows.filter((r) => r.record.status === 'accepted').sort(newest),
         };
-    }, [records]);
+    }, [records, isLive, profileForOwnerId]);
 
-    const respond = (row: Row, accept: boolean) => {
+    const respond = async (row: Row, accept: boolean) => {
         try {
-            if (accept) acceptRequest(row.record.id);
-            else declineRequest(row.record.id);
+            if (accept) await acceptRequest(row.record.id);
+            else await declineRequest(row.record.id);
             toast({
                 title: accept ? `You're now connected with ${row.person.fullName}` : 'Request declined',
                 description: accept ? 'Find them under My Connections.' : `${row.person.fullName}'s request was removed.`,
@@ -82,7 +89,13 @@ const Connections = () => {
             eyebrow="Connections"
             title="Your network"
             description="Everyone you’ve connected with, plus requests waiting on you or them."
-            actions={<StatusPill variant="warning" className="h-9 px-3">DEMO CONNECTIONS</StatusPill>}
+            actions={
+                isLive ? (
+                    <StatusPill variant="success" dot className="h-9 px-3">LIVE CONNECTIONS</StatusPill>
+                ) : (
+                    <StatusPill variant="warning" className="h-9 px-3">DEMO CONNECTIONS</StatusPill>
+                )
+            }
         />
     );
 
@@ -122,9 +135,19 @@ const Connections = () => {
             <div role="note" className="flex items-start gap-3 rounded-2xl border border-warning/20 bg-warning-soft px-4 py-3 text-sm text-warning">
                 <Info className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
                 <p>
-                    <strong className="font-semibold">DEMO CONNECTIONS.</strong> Requests are stored in this browser only and
-                    are not sent to anyone. Every counterpart is a fictional DEMO USER, so sent requests stay pending. Received
-                    requests are simulated locally so you can test accepting and declining.
+                    {isLive ? (
+                        <>
+                            <strong className="font-semibold">LIVE CONNECTIONS.</strong> Requests are sent to real
+                            attendees and update in real time. Accepting a request lets you message each other and
+                            propose meetings.
+                        </>
+                    ) : (
+                        <>
+                            <strong className="font-semibold">DEMO CONNECTIONS.</strong> Requests are stored in this browser only and
+                            are not sent to anyone. Every counterpart is a fictional DEMO USER, so sent requests stay pending. Received
+                            requests are simulated locally so you can test accepting and declining.
+                        </>
+                    )}
                 </p>
             </div>
 
@@ -172,7 +195,7 @@ const Connections = () => {
                             <EmptyState
                                 icon={Send}
                                 title="No requests sent"
-                                description="Send requests from AI Matchmaking or Discover People."
+                                description="Send requests from Smart Matchmaking or Discover People."
                                 action={
                                     <Button asChild size="sm" className="rounded-lg">
                                         <Link to="/matchmaking">See your matches</Link>
@@ -215,9 +238,16 @@ const Connections = () => {
                                         onOpen={() => setSelected(row.person)}
                                         meta={`Connected ${when(row.record.updatedAt)}`}
                                         actions={
-                                            <Button variant="outline" size="sm" className="rounded-lg border-border" onClick={() => setSelected(row.person)}>
-                                                View profile
-                                            </Button>
+                                            <>
+                                                <Button asChild variant="outline" size="sm" className="rounded-lg border-border">
+                                                    <Link to={`/messages?with=${row.record.counterpartId}`}>
+                                                        <MessageSquare className="h-4 w-4" /> Message
+                                                    </Link>
+                                                </Button>
+                                                <Button variant="outline" size="sm" className="rounded-lg border-border" onClick={() => setMeetingTarget(row)}>
+                                                    <CalendarClock className="h-4 w-4" /> Propose meeting
+                                                </Button>
+                                            </>
                                         }
                                     />
                                 ))}
@@ -228,6 +258,15 @@ const Connections = () => {
             </SurfaceCard>
 
             <ProfileDetailDialog profile={selected} onOpenChange={(open) => !open && setSelected(null)} />
+
+            {meetingTarget && (
+                <MeetingForm
+                    open={Boolean(meetingTarget)}
+                    onOpenChange={(open) => !open && setMeetingTarget(null)}
+                    counterpartName={meetingTarget.person.fullName}
+                    onSubmit={(input) => proposeMeeting(meetingTarget.record.counterpartId, input)}
+                />
+            )}
         </div>
     );
 };

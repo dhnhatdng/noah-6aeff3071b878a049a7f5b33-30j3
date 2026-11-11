@@ -8,7 +8,7 @@ import type {
     MeetOption,
     TopicOption,
 } from './options';
-import type { DemoProfile } from './types';
+import type { DemoProfile, ProfileData } from './types';
 
 /**
  * 30 FICTIONAL profiles for testing. Every person and organisation here is invented.
@@ -811,8 +811,8 @@ export const demoCategoryCounts = (): Record<DemoCategory, number> =>
         { founder: 0, developer: 0, investor: 0, ai_infra: 0, community: 0, product_marketing: 0 } as Record<DemoCategory, number>,
     );
 
-/** Free-text search across name, role, organisation, location, skills and topics. */
-export const demoMatchesQuery = (p: DemoProfile, query: string): boolean => {
+/** Free-text search across name, role, organisation, location, skills and topics. Works for demo and real profiles alike. */
+export const demoMatchesQuery = (p: ProfileData, query: string): boolean => {
     const q = query.trim().toLowerCase();
     if (!q) return true;
     return [

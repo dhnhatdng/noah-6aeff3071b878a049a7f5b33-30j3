@@ -49,14 +49,23 @@ export const SOLANA_CHAIN_ID = `solana:${SOLANA_NETWORK === WalletAdapterNetwork
 /** Auth backend for nonce issuance + signature verification. Empty = not configured. */
 export const AUTH_API_URL: string = (import.meta.env.VITE_AUTH_API_URL || '').replace(/\/$/, '');
 
+/** Supabase project credentials (public anon key only — never a service-role key). */
+export const SUPABASE_URL: string = import.meta.env.VITE_SUPABASE_URL || '';
+export const SUPABASE_ANON_KEY: string = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
+
+/** True when both Supabase env vars are present (see src/lib/supabase/client.ts). */
+export const SUPABASE_CONFIGURED: boolean = Boolean(SUPABASE_URL && SUPABASE_ANON_KEY);
+
 /**
  * Guest/demo mode is an explicit configuration switch.
  * Enabled by default during this foundation phase so the UI can be reviewed
- * in environments without wallet extensions. Set VITE_ENABLE_GUEST_MODE=false
- * to require a wallet connection for all app access.
+ * in environments without wallet extensions — but once Supabase is configured
+ * the app is a real product, so guest mode defaults to OFF and a wallet (or
+ * Supabase session) is required. Set VITE_ENABLE_GUEST_MODE=false to require
+ * a wallet connection for all app access; an explicit env value always wins.
  */
 const guestEnv = import.meta.env.VITE_ENABLE_GUEST_MODE;
-export const GUEST_MODE_ENABLED: boolean = guestEnv ? guestEnv === 'true' : true;
+export const GUEST_MODE_ENABLED: boolean = guestEnv ? guestEnv === 'true' : !SUPABASE_CONFIGURED;
 
 /** Google sign-in requires a connected auth backend (e.g. Supabase). Not yet configured. */
 export const GOOGLE_AUTH_ENABLED = false;

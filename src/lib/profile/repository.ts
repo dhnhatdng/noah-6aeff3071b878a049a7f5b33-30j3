@@ -4,8 +4,8 @@ import { PROFILE_SCHEMA_VERSION, type ProfileData, type UserProfile, type Wallet
 
 /**
  * Storage abstraction for the current user's profile.
- * Today: localStorage (this browser only). Later: a Supabase implementation with the
- * same interface (see supabaseMapping.ts), so UI code does not change.
+ * Local: localStorage (this browser only). Supabase: src/lib/supabase/profiles.ts
+ * (same interface, chosen by ProfileProvider when Supabase is configured).
  * Demo profiles are bundled, read-only data and never pass through this repository.
  */
 export interface ProfileRepository {

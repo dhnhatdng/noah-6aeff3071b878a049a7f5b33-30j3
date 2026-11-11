@@ -1,98 +1,114 @@
-import { Buffer } from 'buffer';
-import { AUTH_API_URL, SOLANA_CHAIN_ID } from '@/lib/config';
+import bs58 from 'bs58';
+import nacl from 'tweetnacl';
+import { SOLANA_CHAIN_ID } from '@/lib/config';
+import { isSupabaseConfigured } from '@/lib/supabase/client';
+import { supabaseProfileRepository } from '@/lib/supabase/profiles';
 
 /**
- * Nonce-based wallet ownership verification (Sign-In With Solana style).
+ * Sign-In With Solana (SIWS), verified CLIENT-SIDE.
  *
  * Connecting a wallet only shares a public key — it does NOT prove ownership.
- * Ownership is proven when the wallet signs a one-time, server-issued nonce
- * and the backend verifies the ed25519 signature against the public key.
+ * Ownership is proven when the wallet signs a one-time, locally issued nonce
+ * and the Ed25519 signature verifies against the wallet's public key.
  *
  * Flow:
- *   1. POST {AUTH_API_URL}/nonce   { address }                -> { nonce, issuedAt, expiresAt }
- *   2. Client builds the message below and asks the wallet to sign it (no transaction, no fees).
- *   3. POST {AUTH_API_URL}/verify  { address, message, signature(base64) } -> { token }
- *      Backend must: check nonce exists, is unused and unexpired; rebuild/compare message;
- *      verify signature with nacl.sign.detached.verify; mark nonce consumed; issue session.
+ *   1. A fresh nonce is generated in this browser (crypto.randomUUID) and
+ *      kept in localStorage until it is used (bc:v1:siws-nonce).
+ *   2. The wallet signs the message below (no transaction, no fees).
+ *   3. verifySignature() checks the signature here with tweetnacl, then
+ *      authenticateWallet() writes wallet_address + wallet_verified_at on
+ *      the user's Supabase profile row (when one exists).
  *
- * STATUS: client side implemented. Backend endpoints are PENDING (no auth backend connected).
+ * SECURITY — READ THIS BEFORE MAINNET: client-side verification only proves
+ * the signature to this browser. A production deployment MUST move nonce
+ * issuance and signature verification to a server (the server must check the
+ * nonce is fresh, unused and unexpired, rebuild the exact message, verify
+ * the signature, and only then write wallet_verified_at). Until then, treat
+ * wallet_verified_at as a local convenience flag, not a trust anchor.
  */
 
-export interface NonceResponse {
+export interface SiwsVerification {
+    address: string;
+    verifiedAt: string;
+}
+
+/** Nonce storage: one pending nonce per wallet address. */
+const NONCE_KEY = 'bc:v1:siws-nonce';
+
+interface StoredNonce {
+    address: string;
     nonce: string;
     issuedAt: string;
-    expiresAt: string;
 }
 
-export interface VerifyResponse {
-    token: string;
-}
-
-export class AuthBackendNotConfiguredError extends Error {
-    constructor() {
-        super('Ownership verification backend is not configured yet.');
-        this.name = 'AuthBackendNotConfiguredError';
+/** Issues (and stores) a fresh one-time nonce for this address. */
+export const issueNonce = (address: string): StoredNonce => {
+    const stored: StoredNonce = { address, nonce: crypto.randomUUID(), issuedAt: new Date().toISOString() };
+    try {
+        localStorage.setItem(NONCE_KEY, JSON.stringify(stored));
+    } catch {
+        // Private mode / blocked storage: the in-memory copy below still works.
     }
-}
+    return stored;
+};
 
-export const isBackendAuthConfigured = (): boolean => Boolean(AUTH_API_URL);
+/** Consumes the stored nonce so it cannot be replayed. */
+const consumeNonce = (): void => {
+    try {
+        localStorage.removeItem(NONCE_KEY);
+    } catch {
+        // Non-fatal: the next issueNonce() overwrites it.
+    }
+};
 
-export const buildSignInMessage = (params: { address: string } & NonceResponse): string => {
-    const { host, origin } = window.location;
-    return [
-        `${host} wants you to sign in with your Solana account:`,
-        params.address,
+export const buildSignMessage = (address: string, nonce: string): string =>
+    [
+        'Breakpoint Connect — Sign in with Solana',
         '',
-        'Sign in to Breakpoint Connect. This request will not trigger a blockchain transaction or cost any fees.',
-        '',
-        `URI: ${origin}`,
-        'Version: 1',
-        `Chain ID: ${SOLANA_CHAIN_ID}`,
-        `Nonce: ${params.nonce}`,
-        `Issued At: ${params.issuedAt}`,
-        `Expiration Time: ${params.expiresAt}`,
+        `Address: ${address}`,
+        `Nonce: ${nonce}`,
+        `Chain: ${SOLANA_CHAIN_ID}`,
     ].join('\n');
-};
 
-const postJson = async <T>(path: string, body: unknown): Promise<T> => {
-    const res = await fetch(`${AUTH_API_URL}${path}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify(body),
-    });
-    if (!res.ok) {
-        const text = await res.text().catch(() => '');
-        throw new Error(text || `Auth request failed (${res.status})`);
+/** Pure Ed25519 check: does `signature` over `message` verify against `address`? */
+export const verifySignature = (address: string, message: string, signatureBytes: Uint8Array): boolean => {
+    try {
+        const publicKey = bs58.decode(address);
+        return nacl.sign.detached.verify(new TextEncoder().encode(message), signatureBytes, publicKey);
+    } catch {
+        return false;
     }
-    return (await res.json()) as T;
 };
 
-export const requestNonce = async (address: string): Promise<NonceResponse> => {
-    if (!isBackendAuthConfigured()) throw new AuthBackendNotConfiguredError();
-    return postJson<NonceResponse>('/nonce', { address });
-};
-
-export const verifyWalletSignature = async (payload: {
-    address: string;
-    message: string;
-    signature: string;
-}): Promise<VerifyResponse> => {
-    if (!isBackendAuthConfigured()) throw new AuthBackendNotConfiguredError();
-    return postJson<VerifyResponse>('/verify', payload);
-};
-
-/** Full ownership proof. Session token is kept in memory only (never localStorage). */
+/**
+ * Full ownership proof: issue a nonce, ask the wallet to sign the SIWS
+ * message, verify the signature client-side, then record the verification
+ * on the Supabase profile row when one exists (and Supabase is configured).
+ * In demo mode (no Supabase) the signature is still verified and returned.
+ */
 export const authenticateWallet = async (params: {
     address: string;
     signMessage: (message: Uint8Array) => Promise<Uint8Array>;
-}): Promise<VerifyResponse> => {
-    const nonce = await requestNonce(params.address);
-    const message = buildSignInMessage({ address: params.address, ...nonce });
-    const signatureBytes = await params.signMessage(new TextEncoder().encode(message));
-    return verifyWalletSignature({
-        address: params.address,
-        message,
-        signature: Buffer.from(signatureBytes).toString('base64'),
-    });
+}): Promise<SiwsVerification> => {
+    const { nonce } = issueNonce(params.address);
+    const message = buildSignMessage(params.address, nonce);
+    let signatureBytes: Uint8Array;
+    try {
+        signatureBytes = await params.signMessage(new TextEncoder().encode(message));
+    } catch (error) {
+        consumeNonce();
+        throw new Error(error instanceof Error ? error.message : 'Signing was cancelled.');
+    }
+    if (!verifySignature(params.address, message, signatureBytes)) {
+        consumeNonce();
+        throw new Error('Signature does not match this wallet address.');
+    }
+    consumeNonce();
+    const verifiedAt = new Date().toISOString();
+    if (isSupabaseConfigured()) {
+        // Best effort: no profile row exists yet if the user has not created
+        // one — they can verify again after creating it.
+        await supabaseProfileRepository.markWalletVerified(params.address, verifiedAt);
+    }
+    return { address: params.address, verifiedAt };
 };

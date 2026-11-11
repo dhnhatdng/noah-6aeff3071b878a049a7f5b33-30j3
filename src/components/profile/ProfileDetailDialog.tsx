@@ -2,30 +2,35 @@ import type { ReactNode } from 'react';
 import { Info } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
 import ConnectButton from '@/components/connections/ConnectButton';
-import type { DemoProfile } from '@/lib/profile/types';
+import type { DemoProfile, UserProfile } from '@/lib/profile/types';
 import ProfileHeaderCard from './ProfileHeaderCard';
 import ProfileAboutSection from './ProfileAboutSection';
 import MatchmakingAnswersView from './MatchmakingAnswersView';
 
 interface ProfileDetailDialogProps {
-    profile: DemoProfile | null;
+    /** A demo profile in demo mode, a real attendee profile when live. */
+    profile: DemoProfile | UserProfile | null;
     onOpenChange: (open: boolean) => void;
     /** Optional extra content shown above the profile details (e.g. match explanation). */
     children?: ReactNode;
 }
 
-const ProfileDetailDialog = ({ profile, onOpenChange, children }: ProfileDetailDialogProps) => (
+const ProfileDetailDialog = ({ profile, onOpenChange, children }: ProfileDetailDialogProps) => {
+    const isDemo = profile?.kind === 'demo';
+    return (
     <Dialog open={Boolean(profile)} onOpenChange={onOpenChange}>
         <DialogContent className="max-h-[90vh] gap-0 overflow-y-auto rounded-2xl border-border bg-card p-0 shadow-raised sm:max-w-3xl">
             {profile && (
                 <>
-                    <DialogTitle className="sr-only">{profile.fullName} (demo profile)</DialogTitle>
-                    <DialogDescription className="flex items-start gap-2 border-b border-warning/20 bg-warning-soft px-6 py-3 pr-12 text-xs text-warning">
-                        <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden />
-                        DEMO USER — a fictional profile created for testing. Not a real Breakpoint attendee.
-                    </DialogDescription>
+                    <DialogTitle className="sr-only">{profile.fullName}{isDemo ? ' (demo profile)' : ''}</DialogTitle>
+                    {isDemo && (
+                        <DialogDescription className="flex items-start gap-2 border-b border-warning/20 bg-warning-soft px-6 py-3 pr-12 text-xs text-warning">
+                            <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden />
+                            DEMO USER — a fictional profile created for testing. Not a real Breakpoint attendee.
+                        </DialogDescription>
+                    )}
                     <div className="flex flex-col gap-8 p-6">
-                        <ProfileHeaderCard profile={profile} isDemo plain actions={<ConnectButton profile={profile} />} />
+                        <ProfileHeaderCard profile={profile} isDemo={isDemo} plain actions={<ConnectButton profile={profile} />} />
                         {children}
                         <section className="flex flex-col gap-4">
                             <h3 className="font-display text-lg font-semibold">About</h3>
@@ -40,6 +45,7 @@ const ProfileDetailDialog = ({ profile, onOpenChange, children }: ProfileDetailD
             )}
         </DialogContent>
     </Dialog>
-);
+    );
+};
 
 export default ProfileDetailDialog;

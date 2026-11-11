@@ -48,8 +48,9 @@ export interface ProfileData {
 
 /**
  * A wallet address the user chose to attach to their profile.
- * This is a claim, NOT proof of ownership. Verification is session-scoped and
- * will be issued by the backend once signature verification exists.
+ * This is a claim, NOT proof of ownership. Proof is a client-side SIWS
+ * signature check (see walletAuth.ts); wallet_verified_at on the Supabase
+ * profile row records when that check last succeeded for this address.
  */
 export interface WalletIdentity {
     address: string;

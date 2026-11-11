@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import SurfaceCard from '@/components/common/SurfaceCard';
 import StatusPill from '@/components/common/StatusPill';
 import { useSession } from '@/hooks/useSession';
-import { isBackendAuthConfigured } from '@/lib/walletAuth';
+import { authenticateWallet } from '@/lib/walletAuth';
 import { cn } from '@/lib/utils';
 
 type StepState = 'ready' | 'pending' | 'waiting';
@@ -21,12 +21,11 @@ const StepIcon = ({ state }: { state: StepState }) =>
 const OwnershipVerificationCard = ({ className }: { className?: string }) => {
     const { connected, signMessage } = useWallet();
     const { ownership, verifyOwnership } = useSession();
-    const backendReady = isBackendAuthConfigured();
 
     const steps: { label: string; detail: string; state: StepState }[] = [
         {
             label: 'Sign-in message (SIWS format)',
-            detail: 'Domain, address, chain, nonce and expiry — no transaction, no fees.',
+            detail: 'Address, one-time nonce and chain — no transaction, no fees.',
             state: 'ready',
         },
         {
@@ -39,30 +38,31 @@ const OwnershipVerificationCard = ({ className }: { className?: string }) => {
             state: connected ? (signMessage ? 'ready' : 'pending') : 'waiting',
         },
         {
-            label: 'Nonce issuance endpoint',
-            detail: backendReady ? 'Configured.' : 'Pending — requires an auth backend.',
-            state: backendReady ? 'ready' : 'pending',
+            label: 'Local nonce (one-time, stored in this browser)',
+            detail: 'A fresh nonce is issued per attempt and consumed after use, so a signature cannot be replayed.',
+            state: 'ready',
         },
         {
-            label: 'Server signature verification & session',
-            detail: backendReady ? 'Configured.' : 'Pending — requires an auth backend.',
-            state: backendReady ? 'ready' : 'pending',
+            label: 'Client-side signature check (Ed25519)',
+            detail:
+                ownership.status === 'verified'
+                    ? 'Signature verified against the wallet public key.'
+                    : 'Verified in this browser. A production deployment should move this check server-side.',
+            state: ownership.status === 'verified' ? 'ready' : 'pending',
         },
     ];
 
     const statusPill =
         ownership.status === 'verified' ? (
             <StatusPill variant="success" dot>Verified</StatusPill>
-        ) : backendReady ? (
-            <StatusPill variant="warning" dot>Not verified</StatusPill>
         ) : (
-            <StatusPill variant="neutral" dot>Backend pending</StatusPill>
+            <StatusPill variant="neutral" dot>Not verified</StatusPill>
         );
 
     return (
         <SurfaceCard
             title="Proof of ownership"
-            description="Connecting shares your address. Ownership is proven only by signing a server-issued nonce."
+            description="Connecting shares your address. Ownership is proven only by signing a one-time nonce — checked in this browser; a production deployment should verify server-side."
             action={statusPill}
             className={className}
         >
@@ -86,9 +86,21 @@ const OwnershipVerificationCard = ({ className }: { className?: string }) => {
                 </p>
             )}
 
+            {ownership.status === 'verified' && ownership.address && (
+                <p className="mt-4 rounded-xl bg-success-soft px-3 py-2 text-xs text-success">
+                    Verified {ownership.address}
+                    {ownership.verifiedAt && (
+                        <>
+                            {' '}
+                            · {new Date(ownership.verifiedAt).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })}
+                        </>
+                    )}
+                </p>
+            )}
+
             <Button
                 onClick={verifyOwnership}
-                disabled={!connected || !backendReady || ownership.status === 'verifying' || ownership.status === 'verified'}
+                disabled={!connected || !signMessage || ownership.status === 'verifying' || ownership.status === 'verified'}
                 className={cn('mt-5 rounded-xl')}
             >
                 {ownership.status === 'verifying' ? (
@@ -98,9 +110,12 @@ const OwnershipVerificationCard = ({ className }: { className?: string }) => {
                 )}
                 {ownership.status === 'verifying' ? 'Waiting for signature…' : 'Sign & verify ownership'}
             </Button>
-            {!backendReady && (
+            {!connected && (
+                <p className="mt-2 text-xs text-muted-foreground">Connect a wallet first to verify ownership.</p>
+            )}
+            {connected && !signMessage && (
                 <p className="mt-2 text-xs text-muted-foreground">
-                    Verification is disabled until the backend nonce and verify endpoints are connected.
+                    This wallet does not support message signing, so ownership cannot be verified.
                 </p>
             )}
         </SurfaceCard>

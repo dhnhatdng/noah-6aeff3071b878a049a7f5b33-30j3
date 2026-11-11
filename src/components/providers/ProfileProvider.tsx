@@ -1,10 +1,16 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { ProfileContext, type ProfileContextValue } from '@/lib/profileContext';
 import { PROFILE_STORAGE_KEY, localProfileRepository } from '@/lib/profile/repository';
+import { isSupabaseConfigured } from '@/lib/supabase/client';
+import { supabaseProfileRepository } from '@/lib/supabase/profiles';
 import type { ProfileData, UserProfile, WalletIdentity } from '@/lib/profile/types';
 
-/** Swap this for a Supabase repository later — the UI only talks to the context. */
-const repository = localProfileRepository;
+/**
+ * Supabase repository when the project is configured, localStorage otherwise.
+ * The UI only talks to the context, so switching backends changes no UI code.
+ * storageKind is exposed so the UI can show which mode is active.
+ */
+const repository = isSupabaseConfigured() ? supabaseProfileRepository : localProfileRepository;
 
 const ProfileProvider = ({ children }: { children: ReactNode }) => {
     const [profile, setProfile] = useState<UserProfile | null>(null);

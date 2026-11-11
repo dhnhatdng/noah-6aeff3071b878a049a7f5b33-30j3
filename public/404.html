@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Breakpoint Connect</title>
+    <!--
+      SPA fallback for GitHub Pages (project site). A deep link such as
+      /noah-6aeff3071b878a049a7f5b33-30j3/live has no matching file, so Pages
+      serves this 404 page. It stores the requested path in sessionStorage
+      and redirects to the site root; the restore script in index.html then
+      puts the path back so the router can render the right page.
+      Based on the spa-github-pages pattern (pathSegmentsToKeep = 1 keeps
+      the repo-name segment of a project-page URL).
+    -->
+    <script>
+      (function () {
+        var pathSegmentsToKeep = 1;
+        var l = window.location;
+        var segments = l.pathname.split('/').filter(Boolean);
+        var repoBase = '/' + segments.slice(0, pathSegmentsToKeep).join('/') + '/';
+        var rest = '/' + segments.slice(pathSegmentsToKeep).join('/');
+        var redirect = rest + (l.search || '') + (l.hash || '');
+        try {
+          sessionStorage.setItem('spa-redirect', redirect);
+        } catch (e) {
+          /* private mode: fall back to a plain redirect to the root */
+        }
+        l.replace(repoBase);
+      })();
+    </script>
+  </head>
+  <body>
+    <p>Redirecting to Breakpoint Connect…</p>
+  </body>
+</html>

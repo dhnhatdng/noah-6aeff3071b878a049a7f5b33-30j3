@@ -2,13 +2,13 @@ import { normalizeProfileData } from './normalize';
 import { PROFILE_SCHEMA_VERSION, type UserProfile } from './types';
 
 /**
- * Planned Supabase table (not created yet — Supabase is not connected):
+ * Supabase table (see supabase/migrations/0001_init.sql):
  *
  *   public.profiles (
  *     id                 uuid primary key,
- *     owner_id           uuid references auth.users not null,
+ *     owner_id           uuid references auth.users not null unique,
  *     full_name          text not null,
- *     photo_url          text,             -- move uploads to Supabase Storage
+ *     photo_url          text,             -- Supabase Storage bucket `avatars`
  *     role, organization, location, description, experience_level, experience  text,
  *     expertise, skills, interests  text[],
  *     projects           jsonb,            -- [{ id, name, summary }]
@@ -18,11 +18,15 @@ import { PROFILE_SCHEMA_VERSION, type UserProfile } from './types';
  *     wallet_provider    text,
  *     wallet_network     text,
  *     wallet_linked_at   timestamptz,
- *     wallet_verified_at timestamptz,      -- written ONLY by the server after signature verification
+ *     wallet_verified_at timestamptz,      -- written ONLY after a signature check
+ *                                          -- (client-side SIWS for now; move the
+ *                                          -- check server-side before mainnet)
  *     schema_version     int,
  *     created_at, updated_at timestamptz
  *   )
- *   RLS: owners can select/update/delete their row; public read of non-sensitive columns.
+ *   RLS: public read; only the owner can insert/update/delete their row.
+ *   toProfileRow deliberately omits wallet_verified_at so a plain profile
+ *   save can never forge or clear a verification (see profiles.ts).
  *
  * Demo profiles are bundled fixtures and must never be inserted into this table.
  */

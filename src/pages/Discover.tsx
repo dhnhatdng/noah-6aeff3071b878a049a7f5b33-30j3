@@ -6,25 +6,31 @@ import PageHeader from '@/components/common/PageHeader';
 import EmptyState from '@/components/common/EmptyState';
 import DemoProfileCard from '@/components/profile/DemoProfileCard';
 import ProfileDetailDialog from '@/components/profile/ProfileDetailDialog';
+import { useConnections } from '@/hooks/useConnections';
 import { DEMO_PROFILES, demoCategoryCounts, demoMatchesQuery } from '@/lib/profile/demoProfiles';
 import { DEMO_CATEGORIES, type DemoCategory } from '@/lib/profile/options';
-import type { DemoProfile } from '@/lib/profile/types';
+import type { DemoProfile, UserProfile } from '@/lib/profile/types';
 import { cn } from '@/lib/utils';
 
 type Filter = DemoCategory | 'all';
 
 const Discover = () => {
+    const { publicProfiles, isLive } = useConnections();
     const [query, setQuery] = useState('');
     const [category, setCategory] = useState<Filter>('all');
-    const [selected, setSelected] = useState<DemoProfile | null>(null);
+    const [selected, setSelected] = useState<DemoProfile | UserProfile | null>(null);
+
+    // Real attendees when live (no categories — those are a demo fixture),
+    // fictional demo profiles otherwise.
+    const pool: Array<DemoProfile | UserProfile> = isLive ? publicProfiles : DEMO_PROFILES;
 
     const counts = useMemo(() => demoCategoryCounts(), []);
     const results = useMemo(
         () =>
-            DEMO_PROFILES.filter(
-                (p) => (category === 'all' || p.category === category) && demoMatchesQuery(p, query),
+            pool.filter(
+                (p) => (isLive || category === 'all' || (p as DemoProfile).category === category) && demoMatchesQuery(p, query),
             ),
-        [category, query],
+        [pool, isLive, category, query],
     );
 
     const filters: { value: Filter; label: string; count: number }[] = [
@@ -46,8 +52,17 @@ const Discover = () => {
             >
                 <Info className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
                 <p>
-                    <strong className="font-semibold">Demo data.</strong> Every profile below is a fictional DEMO USER
-                    created for testing. None of them are real Breakpoint attendees.
+                    {isLive ? (
+                        <>
+                            <strong className="font-semibold">Real attendees.</strong> These profiles were created by
+                            people using this app. Only profiles other attendees chose to share are listed here.
+                        </>
+                    ) : (
+                        <>
+                            <strong className="font-semibold">Demo data.</strong> Every profile below is a fictional DEMO USER
+                            created for testing. None of them are real Breakpoint attendees.
+                        </>
+                    )}
                 </p>
             </div>
 
@@ -62,39 +77,45 @@ const Discover = () => {
                         aria-label="Search profiles"
                     />
                 </div>
-                <div className="flex flex-wrap gap-2" role="group" aria-label="Filter by category">
-                    {filters.map((f) => {
-                        const active = category === f.value;
-                        return (
-                            <button
-                                key={f.value}
-                                type="button"
-                                aria-pressed={active}
-                                onClick={() => setCategory(f.value)}
-                                className={cn(
-                                    'inline-flex items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-xs font-medium transition-colors',
-                                    active
-                                        ? 'border-primary bg-primary text-primary-foreground'
-                                        : 'border-border bg-background text-muted-foreground hover:border-primary hover:text-foreground',
-                                )}
-                            >
-                                {f.label}
-                                <span className={active ? 'text-primary-foreground/70' : 'text-muted-foreground/70'}>{f.count}</span>
-                            </button>
-                        );
-                    })}
-                </div>
+                {!isLive && (
+                    <div className="flex flex-wrap gap-2" role="group" aria-label="Filter by category">
+                        {filters.map((f) => {
+                            const active = category === f.value;
+                            return (
+                                <button
+                                    key={f.value}
+                                    type="button"
+                                    aria-pressed={active}
+                                    onClick={() => setCategory(f.value)}
+                                    className={cn(
+                                        'inline-flex items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-xs font-medium transition-colors',
+                                        active
+                                            ? 'border-primary bg-primary text-primary-foreground'
+                                            : 'border-border bg-background text-muted-foreground hover:border-primary hover:text-foreground',
+                                    )}
+                                >
+                                    {f.label}
+                                    <span className={active ? 'text-primary-foreground/70' : 'text-muted-foreground/70'}>{f.count}</span>
+                                </button>
+                            );
+                        })}
+                    </div>
+                )}
             </div>
 
             <p className="text-sm text-muted-foreground" aria-live="polite">
-                Showing {results.length} of {DEMO_PROFILES.length} demo profiles
+                Showing {results.length} of {pool.length} {isLive ? 'attendee profiles' : 'demo profiles'}
             </p>
 
             {results.length === 0 ? (
                 <EmptyState
                     icon={SearchX}
                     title="No profiles match"
-                    description="Try a different search term or category."
+                    description={
+                        isLive && !query
+                            ? 'No other attendees have created a profile yet. Check back closer to the event.'
+                            : 'Try a different search term or category.'
+                    }
                     className="bg-card"
                     action={
                         <Button

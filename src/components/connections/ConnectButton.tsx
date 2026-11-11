@@ -15,25 +15,26 @@ import { Button } from '@/components/ui/button';
 import { useConnections } from '@/hooks/useConnections';
 import { useProfile } from '@/hooks/useProfile';
 import { toast } from '@/hooks/use-toast';
-import type { DemoProfile } from '@/lib/profile/types';
+import type { DemoProfile, UserProfile } from '@/lib/profile/types';
 import { cn } from '@/lib/utils';
 
 interface ConnectButtonProps {
-    profile: DemoProfile;
+    /** A demo profile in demo mode, a real attendee profile when live. */
+    profile: DemoProfile | UserProfile;
     size?: 'sm' | 'default';
     className?: string;
 }
 
 const ConnectButton = ({ profile, size = 'default', className }: ConnectButtonProps) => {
     const { profile: me } = useProfile();
-    const { relationTo, sendRequest, acceptRequest } = useConnections();
+    const { relationTo, sendRequest, acceptRequest, isLive } = useConnections();
     const [confirmOpen, setConfirmOpen] = useState(false);
     const first = profile.fullName.split(' ')[0];
     const base = cn('rounded-xl', className);
 
-    const run = (action: () => void, title: string, description?: string) => {
+    const run = async (action: () => Promise<void> | void, title: string, description?: string) => {
         try {
-            action();
+            await action();
             toast({ title, description });
         } catch (err) {
             toast({
@@ -94,8 +95,9 @@ const ConnectButton = ({ profile, size = 'default', className }: ConnectButtonPr
                     <AlertDialogHeader>
                         <AlertDialogTitle className="font-display">Send a connection request to {profile.fullName}?</AlertDialogTitle>
                         <AlertDialogDescription>
-                            DEMO CONNECTIONS: the request is saved in this browser only. {first} is a fictional demo user,
-                            so they won’t receive it and it will stay pending.
+                            {isLive
+                                ? `The request will be sent to ${first}. They can accept or decline it from their Connections page.`
+                                : `DEMO CONNECTIONS: the request is saved in this browser only. ${first} is a fictional demo user, so they won’t receive it and it will stay pending.`}
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>

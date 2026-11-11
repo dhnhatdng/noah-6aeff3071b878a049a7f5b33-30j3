@@ -12,6 +12,7 @@ import ProfileDetailDialog from '@/components/profile/ProfileDetailDialog';
 import MatchCard from '@/components/matchmaking/MatchCard';
 import MatchExplanation from '@/components/matchmaking/MatchExplanation';
 import { useProfile } from '@/hooks/useProfile';
+import { useConnections } from '@/hooks/useConnections';
 import { countAnswered, MATCHMAKING_QUESTIONS } from '@/lib/profile/questions';
 import { DEMO_PROFILES } from '@/lib/profile/demoProfiles';
 import { MATCH_WEIGHTS, SCORE_LABELS, SCORE_ORDER, matchReadiness, rankMatches, type MatchResult } from '@/lib/matchmaking/scoring';
@@ -77,7 +78,11 @@ const GoalsCard = () => {
 
 const MatchResults = () => {
     const { profile, status } = useProfile();
+    const { publicProfiles, isLive } = useConnections();
     const [selected, setSelected] = useState<MatchResult | null>(null);
+
+    // Real attendees when live, fictional demo profiles otherwise.
+    const candidates = isLive ? publicProfiles : DEMO_PROFILES;
 
     // Recomputed whenever the saved profile changes (goals, skills, projects, offers, needs…).
     const outcome = useMemo(() => {
@@ -85,11 +90,11 @@ const MatchResults = () => {
         const missing = matchReadiness(profile);
         if (missing.length > 0) return { kind: 'incomplete' as const, missing };
         try {
-            return { kind: 'ok' as const, ...rankMatches(profile, DEMO_PROFILES) };
+            return { kind: 'ok' as const, ...rankMatches(profile, candidates) };
         } catch (error) {
             return { kind: 'error' as const, message: error instanceof Error ? error.message : 'Unknown error' };
         }
-    }, [profile]);
+    }, [profile, candidates]);
 
     if (status === 'loading') {
         return (
@@ -147,12 +152,12 @@ const MatchResults = () => {
             <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
                 <h2 className="font-display text-2xl font-semibold">Your top {outcome.results.length} matches</h2>
                 <p className="text-xs text-muted-foreground">
-                    Scored {outcome.eligibleCount} demo profiles · {outcome.excludedCount} excluded · updated from your
+                    Scored {outcome.eligibleCount} {isLive ? 'real' : 'demo'} profiles · {outcome.excludedCount} excluded · updated from your
                     profile saved {new Date(profile.updatedAt).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })}
                 </p>
             </div>
             {outcome.results.length === 0 ? (
-                <EmptyState icon={Sparkles} title="No eligible profiles" description="No demo profiles had enough information to score." className="bg-card" />
+                <EmptyState icon={Sparkles} title="No eligible profiles" description={isLive ? 'No other attendees have completed a matchable profile yet.' : 'No demo profiles had enough information to score.'} className="bg-card" />
             ) : (
                 <ol className="flex flex-col gap-4">
                     {outcome.results.map((m) => (
@@ -169,15 +174,21 @@ const MatchResults = () => {
     );
 };
 
-const Matchmaking = () => (
+const Matchmaking = () => {
+    const { isLive } = useConnections();
+    return (
     <div className="flex flex-col gap-8">
         <PageHeader
-            eyebrow="AI Matchmaking"
+            eyebrow="Smart Matchmaking"
             title="Curated introductions"
             description="Matchmaking turns your profile and goals into a short list of people worth meeting."
             actions={
                 <>
-                    <StatusPill variant="warning" className="h-9 px-3">DEMO MATCHING</StatusPill>
+                    {isLive ? (
+                        <StatusPill variant="success" dot className="h-9 px-3">LIVE MATCHING</StatusPill>
+                    ) : (
+                        <StatusPill variant="warning" className="h-9 px-3">DEMO MATCHING</StatusPill>
+                    )}
                     <Button asChild className="rounded-xl">
                         <Link to="/profile?edit=matchmaking">
                             <Sparkles className="h-4 w-4" /> Update my answers
@@ -190,9 +201,19 @@ const Matchmaking = () => (
         <div role="note" className="flex items-start gap-3 rounded-2xl border border-warning/20 bg-warning-soft px-4 py-3 text-sm text-warning">
             <Info className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
             <p>
-                <strong className="font-semibold">DEMO MATCHING.</strong> No AI service is connected. Matches come from a
-                deterministic weighted score ({weightsText}) calculated from your saved profile against the fictional DEMO
-                USER profiles.
+                {isLive ? (
+                    <>
+                        <strong className="font-semibold">LIVE MATCHING.</strong> No AI service is connected. Matches
+                        come from a deterministic weighted score ({weightsText}) calculated from your saved profile
+                        against real attendee profiles.
+                    </>
+                ) : (
+                    <>
+                        <strong className="font-semibold">DEMO MATCHING.</strong> No AI service is connected. Matches come from a
+                        deterministic weighted score ({weightsText}) calculated from your saved profile against the fictional DEMO
+                        USER profiles.
+                    </>
+                )}
             </p>
         </div>
 
@@ -213,6 +234,7 @@ const Matchmaking = () => (
 
         <MatchResults />
     </div>
-);
+    );
+};
 
 export default Matchmaking;
