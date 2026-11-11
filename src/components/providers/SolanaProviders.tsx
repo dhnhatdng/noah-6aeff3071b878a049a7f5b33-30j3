@@ -38,6 +38,13 @@ const ConnectAfterSelect = () => {
         initialNameRef.current = wallet?.adapter.name ?? null;
     }
     const prevVisibleRef = useRef(visible);
+    const mountedRef = useRef(true);
+    useEffect(() => {
+        mountedRef.current = true;
+        return () => {
+            mountedRef.current = false;
+        };
+    }, []);
 
     useEffect(() => {
         const wasOpen = prevVisibleRef.current;
@@ -46,12 +53,31 @@ const ConnectAfterSelect = () => {
         const pickedDifferent = wallet.adapter.name !== initialNameRef.current;
         const modalJustClosed = wasOpen && !visible;
         if (!pickedDifferent && !modalJustClosed) return;
-        connect().catch(() => {
-            toast({
-                title: `Couldn't connect to ${wallet.adapter.name}`,
-                description: 'Make sure the wallet app is installed on this device, then try again.',
+        let settled = false;
+        // If the wallet never answers (e.g. its app/extension is not
+        // installed, so the adapter opens an install page instead), the
+        // connect promise never settles and the UI hangs on "Waiting for
+        // wallet approval…". Nudge the user instead of hanging silently.
+        const timer = setTimeout(() => {
+            if (!settled && mountedRef.current) {
+                toast({
+                    title: 'Still waiting for wallet approval',
+                    description: `If nothing opened, ${wallet.adapter.name} may not be installed on this device — install its app or extension, then try again.`,
+                });
+            }
+        }, 20000);
+        connect()
+            .catch(() => {
+                toast({
+                    title: `Couldn't connect to ${wallet.adapter.name}`,
+                    description: 'Make sure the wallet app is installed on this device, then try again.',
+                });
+            })
+            .finally(() => {
+                settled = true;
+                clearTimeout(timer);
             });
-        });
+        return () => clearTimeout(timer);
     }, [wallet, connected, connecting, visible, connect]);
 
     return null;

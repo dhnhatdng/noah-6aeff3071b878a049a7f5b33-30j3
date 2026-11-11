@@ -25,6 +25,29 @@ export const isSupabaseConfigured = (): boolean => supabase !== null;
 /** Flag (not the id itself) recording that an anonymous session was established. */
 const ANON_FLAG_KEY = 'bc:v1:supabase-anon';
 
+/**
+ * Force-clear the Supabase session stored in this browser, regardless of
+ * what the server says. supabase.auth.signOut() can return early WITHOUT
+ * clearing the local session — e.g. when reading the session fails, or
+ * when the server-side revoke call fails with a non-401/403/404 error —
+ * and then the user looks still signed in after "signing out" (observed
+ * on production 2026-11-11: 4 sign-out clicks, session survived). The
+ * storage key is `sb-<project-ref>-auth-token`; the code-verifier key
+ * from the PKCE dance is cleared too.
+ */
+export const clearLocalSupabaseSession = (): void => {
+    try {
+        const keys: string[] = [];
+        for (let i = 0; i < localStorage.length; i++) {
+            const key = localStorage.key(i);
+            if (key && key.startsWith('sb-') && key.includes('auth-token')) keys.push(key);
+        }
+        keys.forEach((key) => localStorage.removeItem(key));
+    } catch {
+        // Private mode / blocked storage: nothing to clear.
+    }
+};
+
 let anonUserId: string | null = null;
 let anonPromise: Promise<string | null> | null = null;
 

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { GUEST_MODE_ENABLED } from '@/lib/config';
-import { resetAnonUserId, supabase } from '@/lib/supabase/client';
+import { clearLocalSupabaseSession, resetAnonUserId, supabase } from '@/lib/supabase/client';
 import { SessionContext, type OwnershipState, type SessionContextValue } from '@/lib/sessionContext';
 import { authenticateWallet } from '@/lib/walletAuth';
 import { shortenAddress } from '@/lib/wallet';
@@ -118,6 +118,12 @@ const SessionProvider = ({ children, walletError, setWalletError }: SessionProvi
      * ProfileProvider/ConnectionsProvider load once and hold the
      * signed-in user's data in memory, so a soft navigate could leak
      * the old profile to the next sign-in.
+     *
+     * Robustness: supabase.auth.signOut() can fail or hang and return
+     * WITHOUT clearing the local session, leaving the user signed in
+     * (observed on production 2026-11-11). So the server call races a
+     * 5s timeout, and the local session is force-cleared afterwards no
+     * matter what, before navigating away.
      */
     const signOut = useCallback(async () => {
         setWalletError(null);
@@ -137,11 +143,12 @@ const SessionProvider = ({ children, walletError, setWalletError }: SessionProvi
             }
         }
         if (supabase) {
-            try {
-                await supabase.auth.signOut();
-            } catch {
-                // Sign-out proceeds regardless; the local session is cleared.
-            }
+            const attempt = supabase.auth.signOut().catch(() => undefined);
+            await Promise.race([
+                attempt,
+                new Promise((resolve) => setTimeout(resolve, 5000)),
+            ]);
+            clearLocalSupabaseSession();
         }
         resetAnonUserId();
         window.location.assign('/login');
