@@ -273,6 +273,38 @@ drop policy if exists "event_checkins_own_delete" on public.event_checkins;
 create policy "event_checkins_own_delete" on public.event_checkins
     for delete using (auth.uid() = user_id);
 
+-- ── Storage policies for the `avatars` bucket ────────────────────────────
+-- Create the bucket itself in the dashboard (Storage -> New bucket, name
+-- `avatars`, Public ON). A public bucket still enforces RLS on
+-- storage.objects, so without these policies photo uploads fail with an
+-- RLS violation. The app uploads to `<auth-user-id>/<file>`, so each user
+-- can only write inside their own folder; anyone can read (public URLs).
+drop policy if exists "avatars_public_read" on storage.objects;
+create policy "avatars_public_read" on storage.objects
+    for select using (bucket_id = 'avatars');
+drop policy if exists "avatars_owner_upload" on storage.objects;
+create policy "avatars_owner_upload" on storage.objects
+    for insert with check (
+        bucket_id = 'avatars'
+        and auth.uid()::text = (storage.foldername(name))[1]
+    );
+drop policy if exists "avatars_owner_update" on storage.objects;
+create policy "avatars_owner_update" on storage.objects
+    for update using (
+        bucket_id = 'avatars'
+        and auth.uid()::text = (storage.foldername(name))[1]
+    )
+    with check (
+        bucket_id = 'avatars'
+        and auth.uid()::text = (storage.foldername(name))[1]
+    );
+drop policy if exists "avatars_owner_delete" on storage.objects;
+create policy "avatars_owner_delete" on storage.objects
+    for delete using (
+        bucket_id = 'avatars'
+        and auth.uid()::text = (storage.foldername(name))[1]
+    );
+
 -- ── event_sessions (program themes only — no times or speakers) ────────────
 create table if not exists public.event_sessions (
     id uuid primary key default gen_random_uuid(),
