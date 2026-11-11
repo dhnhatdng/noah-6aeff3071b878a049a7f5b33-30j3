@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } fro
 import { ConnectionProvider, WalletProvider, useWallet } from '@solana/wallet-adapter-react';
 import { WalletModalProvider, useWalletModal } from '@solana/wallet-adapter-react-ui';
 import type { WalletError } from '@solana/wallet-adapter-base';
+import { WalletReadyState } from '@solana/wallet-adapter-base';
 import { PhantomWalletAdapter, SolflareWalletAdapter } from '@solana/wallet-adapter-wallets';
 import { SOLANA_NETWORK, SOLANA_RPC_ENDPOINT } from '@/lib/config';
 import { describeWalletError } from '@/lib/wallet';
@@ -52,7 +53,18 @@ const ConnectAfterSelect = () => {
         if (!wallet || connected || connecting) return;
         const pickedDifferent = wallet.adapter.name !== initialNameRef.current;
         const modalJustClosed = wasOpen && !visible;
-        if (!pickedDifferent && !modalJustClosed) return;
+        // An explicit tap always tries to connect, so a missing wallet
+        // shows the install guidance. But a bare modal close must only
+        // auto-connect when the wallet is actually present (Installed /
+        // Loadable — the Mobile Wallet Adapter reports Loadable): without
+        // this, a stale stored selection makes the app flash a
+        // "Couldn't connect" error for a wallet the user never picked
+        // (observed on production 2026-11-11 when the modal was closed
+        // without choosing anything).
+        const connectable =
+            wallet.adapter.readyState === WalletReadyState.Installed ||
+            wallet.adapter.readyState === WalletReadyState.Loadable;
+        if (!pickedDifferent && !(modalJustClosed && connectable)) return;
         connect().catch(() => {
             toast({
                 title: `Couldn't connect to ${wallet.adapter.name}`,

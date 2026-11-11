@@ -41,7 +41,12 @@ const ProfileDataCard = ({ className }: { className?: string }) => {
                         <Row label="Last updated">{formatDate(profile.updatedAt)}</Row>
                     </>
                 )}
-                <Row label="Demo profiles">{DEMO_PROFILES.length} fictional, read-only, kept separate</Row>
+                {/* Demo profiles only exist in local demo mode; in live mode
+                    this row would wrongly imply the real attendee list is
+                    fictional, so hide it when the profile lives in Supabase. */}
+                {storageKind === 'local' && (
+                    <Row label="Demo profiles">{DEMO_PROFILES.length} fictional, read-only, kept separate</Row>
+                )}
             </dl>
             {profile && (
                 <div className="mt-4">

@@ -5,9 +5,9 @@ import SurfaceCard from '@/components/common/SurfaceCard';
 import EmptyState from '@/components/common/EmptyState';
 import { useConnections } from '@/hooks/useConnections';
 
-/** Overview card with real counts from local demo connection data. */
+/** Overview card with connection counts — live Supabase counts when configured, local demo counts otherwise. */
 const ConnectionsSummaryCard = () => {
-    const { records } = useConnections();
+    const { records, isLive } = useConnections();
     const connected = records.filter((r) => r.status === 'accepted').length;
     const received = records.filter((r) => r.status === 'pending' && r.direction === 'received').length;
     const sent = records.filter((r) => r.status === 'pending' && r.direction === 'sent').length;
@@ -37,7 +37,7 @@ const ConnectionsSummaryCard = () => {
     ];
 
     return (
-        <SurfaceCard title="Connections" description="Demo connections in this browser.">
+        <SurfaceCard title="Connections" description={isLive ? 'People you’ve connected with.' : 'Demo connections in this browser.'}>
             <dl className="grid grid-cols-3 gap-2">
                 {stats.map((s) => (
                     <div key={s.label} className="rounded-xl bg-secondary/60 px-3 py-3 text-center">

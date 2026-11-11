@@ -164,7 +164,11 @@ const Connections = () => {
                             <EmptyState
                                 icon={Inbox}
                                 title="No requests received"
-                                description="Simulated demo requests appear once your matchmaking profile is complete (name, role, skills, goals and offers or needs)."
+                                description={
+                                    isLive
+                                        ? 'Connection requests you receive will appear here.'
+                                        : 'Simulated demo requests appear once your matchmaking profile is complete (name, role, skills, goals and offers or needs).'
+                                }
                             />
                         ) : (
                             <ul className="flex flex-col gap-3">
