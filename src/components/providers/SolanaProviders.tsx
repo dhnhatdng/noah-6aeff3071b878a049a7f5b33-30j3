@@ -53,40 +53,59 @@ const ConnectAfterSelect = () => {
         const pickedDifferent = wallet.adapter.name !== initialNameRef.current;
         const modalJustClosed = wasOpen && !visible;
         if (!pickedDifferent && !modalJustClosed) return;
-        let settled = false;
-        // If the wallet never answers (e.g. its app/extension is not
-        // installed, so the adapter opens an install page instead), the
-        // connect promise never settles and the UI hangs on "Waiting for
-        // wallet approval…". Nudge the user instead of hanging silently.
+        connect().catch(() => {
+            toast({
+                title: `Couldn't connect to ${wallet.adapter.name}`,
+                description: 'Make sure the wallet app is installed on this device, then try again.',
+            });
+        });
+    }, [wallet, connected, connecting, visible, connect]);
+
+    // If the wallet never answers (e.g. its app/extension is not
+    // installed, so the adapter opens an install page instead), the
+    // connect promise never settles and the UI hangs on "Waiting for
+    // wallet approval…". Nudge the user instead of hanging silently.
+    // Separate effect: the connect effect above re-runs and clears its
+    // cleanup when `connecting` flips, which used to kill this timer
+    // before it ever fired (observed 2026-11-11).
+    useEffect(() => {
+        if (!connecting || !wallet) return;
         const timer = setTimeout(() => {
-            if (!settled && mountedRef.current) {
+            if (mountedRef.current) {
                 toast({
                     title: 'Still waiting for wallet approval',
                     description: `If nothing opened, ${wallet.adapter.name} may not be installed on this device — install its app or extension, then try again.`,
                 });
             }
         }, 20000);
-        connect()
-            .catch(() => {
-                toast({
-                    title: `Couldn't connect to ${wallet.adapter.name}`,
-                    description: 'Make sure the wallet app is installed on this device, then try again.',
-                });
-            })
-            .finally(() => {
-                settled = true;
-                clearTimeout(timer);
-            });
         return () => clearTimeout(timer);
-    }, [wallet, connected, connecting, visible, connect]);
+    }, [connecting, wallet]);
 
     return null;
 };
 const SolanaProviders = ({ children }: { children: ReactNode }) => {
     const [walletError, setWalletError] = useState<string | null>(null);
 
+    // The Phantom adapter has no path to the installed app on Android
+    // Chrome: it only connects via an injected provider (desktop
+    // extension / in-app browser) or via its iOS-only universal-link
+    // redirect, so on Android tapping "Phantom" always fails with a
+    // misleading "not installed" error (reported from a phone on
+    // 2026-11-11). Hide it on Android — Phantom is still reachable
+    // there through the "Mobile Wallet Adapter" row, which is backed
+    // by the Wallet Standard mobile wallet. Keep Phantom on iOS (the
+    // universal-link redirect works there) and on desktop (extension).
+    const isAndroid =
+        typeof navigator !== 'undefined' && /Android/i.test(navigator.userAgent);
+
     const wallets = useMemo(
-        () => [new PhantomWalletAdapter(), new SolflareWalletAdapter({ network: SOLANA_NETWORK })],
+        () => [
+            ...(isAndroid ? [] : [new PhantomWalletAdapter()]),
+            new SolflareWalletAdapter({ network: SOLANA_NETWORK }),
+        ],
+        // isAndroid is read once from the user agent; it never changes
+        // for the lifetime of the page.
+        // eslint-disable-next-line react-hooks/exhaustive-deps
         [],
     );
 
