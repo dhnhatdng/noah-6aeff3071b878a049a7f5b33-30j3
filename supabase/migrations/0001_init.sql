@@ -150,6 +150,17 @@ create table if not exists public.collaborations (
 );
 create index if not exists collaborations_owner_id_idx on public.collaborations (owner_id);
 
+-- NOTE: collaboration_members must be created BEFORE the policies on
+-- collaborations below, because "collaborations_members_read" references it.
+-- (Postgres validates a policy's query when the policy is created, so
+-- creating the table afterwards fails with 42P01.)
+create table if not exists public.collaboration_members (
+    collaboration_id uuid not null references public.collaborations (id) on delete cascade,
+    user_id uuid not null references auth.users (id) on delete cascade,
+    primary key (collaboration_id, user_id)
+);
+create index if not exists collaboration_members_user_id_idx on public.collaboration_members (user_id);
+
 alter table public.collaborations enable row level security;
 drop policy if exists "collaborations_members_read" on public.collaborations;
 create policy "collaborations_members_read" on public.collaborations
@@ -170,13 +181,6 @@ create policy "collaborations_owner_write" on public.collaborations
 drop policy if exists "collaborations_owner_delete" on public.collaborations;
 create policy "collaborations_owner_delete" on public.collaborations
     for delete using (auth.uid() = owner_id);
-
-create table if not exists public.collaboration_members (
-    collaboration_id uuid not null references public.collaborations (id) on delete cascade,
-    user_id uuid not null references auth.users (id) on delete cascade,
-    primary key (collaboration_id, user_id)
-);
-create index if not exists collaboration_members_user_id_idx on public.collaboration_members (user_id);
 
 alter table public.collaboration_members enable row level security;
 drop policy if exists "collaboration_members_read" on public.collaboration_members;
