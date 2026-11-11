@@ -131,11 +131,15 @@ only) — it will not error, it just will not share data between users.
 ### Vercel (alternative)
 
 1. Import the repo in Vercel (framework preset: Vite).
-2. Set environment variables `VITE_SUPABASE_URL` and
+2. Set **Production Branch to `full-product`** (Project → Settings →
+   Git → Production Branch). The default branch `main` still contains
+   the old code (including `react-copy-to-clipboard`, which conflicts
+   with React 19 and fails `npm install` on Vercel) — do not deploy `main`.
+3. Set environment variables `VITE_SUPABASE_URL` and
    `VITE_SUPABASE_ANON_KEY` (Project → Settings → Environment
    Variables) for live mode; without them the deployment runs in demo
    mode.
-3. Deploy. `vercel.json` rewrites all routes to `/index.html`, so
+4. Deploy (pushing to `full-product` auto-deploys). `vercel.json` rewrites all routes to `/index.html`, so
    deep links work.
 
 ## Architecture / data model
