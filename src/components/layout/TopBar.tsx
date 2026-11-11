@@ -5,6 +5,7 @@ import BrandLogo from './BrandLogo';
 import DataModeBadge from '@/components/common/DataModeBadge';
 import NetworkBadge from '@/components/wallet/NetworkBadge';
 import WalletButton from '@/components/wallet/WalletButton';
+import SignOutButton from './SignOutButton';
 
 const TopBar = ({ onOpenMenu }: { onOpenMenu: () => void }) => {
     const { pathname } = useLocation();
@@ -33,6 +34,7 @@ const TopBar = ({ onOpenMenu }: { onOpenMenu: () => void }) => {
                     <DataModeBadge className="hidden sm:inline-flex" />
                     <NetworkBadge className="hidden sm:inline-flex" />
                     <WalletButton />
+                    <SignOutButton />
                 </div>
             </div>
         </header>

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { GUEST_MODE_ENABLED } from '@/lib/config';
-import { supabase } from '@/lib/supabase/client';
+import { resetAnonUserId, supabase } from '@/lib/supabase/client';
 import { SessionContext, type OwnershipState, type SessionContextValue } from '@/lib/sessionContext';
 import { authenticateWallet } from '@/lib/walletAuth';
 import { shortenAddress } from '@/lib/wallet';
@@ -16,7 +16,7 @@ interface SessionProviderProps {
 }
 
 const SessionProvider = ({ children, walletError, setWalletError }: SessionProviderProps) => {
-    const { publicKey, connected, signMessage, wallet } = useWallet();
+    const { publicKey, connected, signMessage, wallet, disconnect } = useWallet();
     const address = publicKey?.toBase58() ?? null;
 
     const [isGuest, setIsGuest] = useState<boolean>(
@@ -25,6 +25,7 @@ const SessionProvider = ({ children, walletError, setWalletError }: SessionProvi
     const [ownership, setOwnership] = useState<OwnershipState>({ status: 'unverified' });
     const [connectDialogOpen, setConnectDialogOpen] = useState(false);
     const [supabaseUserId, setSupabaseUserId] = useState<string | null>(null);
+    const [authProvider, setAuthProvider] = useState<string | null>(null);
     const wasConnected = useRef(connected);
 
     // Track a real (non-anonymous) Supabase Auth session — e.g. Google OAuth.
@@ -34,8 +35,15 @@ const SessionProvider = ({ children, walletError, setWalletError }: SessionProvi
     useEffect(() => {
         if (!supabase) return;
         let mounted = true;
-        const applySession = (user: { id: string; is_anonymous?: boolean } | null) => {
-            if (mounted) setSupabaseUserId(user && !user.is_anonymous ? user.id : null);
+        const applySession = (user: { id: string; is_anonymous?: boolean; app_metadata?: { provider?: string } } | null) => {
+            if (!mounted) return;
+            if (user && !user.is_anonymous) {
+                setSupabaseUserId(user.id);
+                setAuthProvider(user.app_metadata?.provider ?? null);
+            } else {
+                setSupabaseUserId(null);
+                setAuthProvider(null);
+            }
         };
         supabase.auth.getSession().then(({ data: { session } }) => applySession(session?.user ?? null));
         const {
@@ -79,6 +87,66 @@ const SessionProvider = ({ children, walletError, setWalletError }: SessionProvi
         setIsGuest(false);
     }, []);
 
+    /**
+     * Opening the connect dialog starts a fresh attempt: a stale wallet
+     * error (e.g. from a failed reconnect on page load) must not greet
+     * the user before they have clicked anything.
+     */
+    const handleSetConnectDialogOpen = useCallback(
+        (open: boolean) => {
+            if (open) setWalletError(null);
+            setConnectDialogOpen(open);
+        },
+        [setWalletError],
+    );
+
+    /** How the current session was established, for display only. */
+    const signInMethod: SessionContextValue['signInMethod'] = isGuest
+        ? 'guest'
+        : authProvider === 'google'
+          ? 'google'
+          : connected
+            ? 'wallet'
+            : supabaseUserId
+              ? 'other'
+              : null;
+
+    /**
+     * Full sign-out: ends the Supabase session (Google included),
+     * disconnects the wallet, leaves guest mode and drops the pending
+     * SIWS nonce, then reloads on /login. The reload is deliberate:
+     * ProfileProvider/ConnectionsProvider load once and hold the
+     * signed-in user's data in memory, so a soft navigate could leak
+     * the old profile to the next sign-in.
+     */
+    const signOut = useCallback(async () => {
+        setWalletError(null);
+        setOwnership({ status: 'unverified' });
+        sessionStorage.removeItem(GUEST_KEY);
+        setIsGuest(false);
+        try {
+            localStorage.removeItem('bc:v1:siws-nonce');
+        } catch {
+            // Private mode / blocked storage: nothing to clear.
+        }
+        if (connected) {
+            try {
+                await disconnect();
+            } catch {
+                // Sign-out proceeds regardless of a wallet disconnect failure.
+            }
+        }
+        if (supabase) {
+            try {
+                await supabase.auth.signOut();
+            } catch {
+                // Sign-out proceeds regardless; the local session is cleared.
+            }
+        }
+        resetAnonUserId();
+        window.location.assign('/login');
+    }, [connected, disconnect, setWalletError]);
+
     const verifyOwnership = useCallback(async () => {
         if (!address) {
             setOwnership({ status: 'error', message: 'Connect a wallet first.' });
@@ -112,12 +180,14 @@ const SessionProvider = ({ children, walletError, setWalletError }: SessionProvi
             enterGuestMode,
             exitGuestMode,
             supabaseUserId,
+            signInMethod,
+            signOut,
             ownership,
             verifyOwnership,
             connectDialogOpen,
-            setConnectDialogOpen,
+            setConnectDialogOpen: handleSetConnectDialogOpen,
         }),
-        [walletError, setWalletError, isGuest, enterGuestMode, exitGuestMode, supabaseUserId, ownership, verifyOwnership, connectDialogOpen],
+        [walletError, setWalletError, isGuest, enterGuestMode, exitGuestMode, supabaseUserId, signInMethod, signOut, ownership, verifyOwnership, connectDialogOpen, handleSetConnectDialogOpen],
     );
 
     return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>;

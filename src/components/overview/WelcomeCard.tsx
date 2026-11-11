@@ -8,7 +8,7 @@ import { cn } from '@/lib/utils';
 const WelcomeCard = ({ className }: { className?: string }) => {
     const { connected, walletName, address } = useWalletConnect();
     const { isGuest } = useSession();
-    const { profile } = useProfile();
+    const { profile, status } = useProfile();
     const firstName = profile?.fullName.split(' ')[0];
 
     return (
@@ -34,14 +34,20 @@ const WelcomeCard = ({ className }: { className?: string }) => {
             </svg>
             <p className="relative text-xs font-semibold uppercase tracking-[0.18em] text-primary-strong">Overview</p>
             <h1 className="relative mt-3 max-w-xl text-3xl font-semibold leading-[1.1] sm:text-[40px]">
-                {firstName ? `Welcome back, ${firstName}` : 'Welcome to Breakpoint Connect'}
+                {status === 'loading'
+                    ? 'Loading your profile…'
+                    : firstName
+                      ? `Welcome back, ${firstName}`
+                      : 'Welcome to Breakpoint Connect'}
             </h1>
             <p className="relative mt-3 max-w-lg text-[15px] leading-relaxed text-muted-foreground">
-                {connected && address
-                    ? `Signed in with ${walletName} · ${shortenAddress(address)}. Complete your profile to unlock AI-curated introductions.`
-                    : isGuest
-                      ? 'You’re exploring in guest demo mode. Connect a wallet to create your attendee identity.'
-                      : 'Connect a wallet to create your attendee identity.'}
+                {status === 'loading'
+                    ? 'Fetching your attendee profile.'
+                    : connected && address
+                      ? `Signed in with ${walletName} · ${shortenAddress(address)}. Complete your profile to unlock AI-curated introductions.`
+                      : isGuest
+                        ? 'You’re exploring in guest demo mode. Connect a wallet to create your attendee identity.'
+                        : 'Connect a wallet to create your attendee identity.'}
             </p>
         </motion.section>
     );

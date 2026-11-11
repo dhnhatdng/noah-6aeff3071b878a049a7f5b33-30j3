@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import PageHeader from '@/components/common/PageHeader';
 import SurfaceCard from '@/components/common/SurfaceCard';
@@ -9,6 +9,7 @@ import OwnershipVerificationCard from '@/components/wallet/OwnershipVerification
 import NetworkBadge from '@/components/wallet/NetworkBadge';
 import ProfileDataCard from '@/components/profile/ProfileDataCard';
 import WalletIdentityCard from '@/components/profile/WalletIdentityCard';
+import SignOutButton from '@/components/layout/SignOutButton';
 import { useClusterStatus } from '@/hooks/useClusterStatus';
 import { useSession } from '@/hooks/useSession';
 import { GOOGLE_AUTH_ENABLED, GUEST_MODE_ENABLED, NETWORK_LABELS, SOLANA_NETWORK, rpcHost } from '@/lib/config';
@@ -49,8 +50,20 @@ const NetworkCard = () => {
 };
 
 const Settings = () => {
-    const { isGuest, exitGuestMode } = useSession();
+    const { isGuest, exitGuestMode, signInMethod } = useSession();
     const navigate = useNavigate();
+
+    // The label names the method the session was actually established
+    // with — never a guess. 'other' is a real Supabase session via an
+    // unlisted provider, so it gets the honest generic label.
+    const sessionLabel =
+        signInMethod === 'guest'
+            ? 'Guest (demo)'
+            : signInMethod === 'google'
+              ? 'Google'
+              : signInMethod === 'wallet'
+                ? 'Wallet'
+                : 'Signed in';
 
     return (
         <div className="flex flex-col gap-8">
@@ -87,20 +100,23 @@ const Settings = () => {
                                     <StatusPill>Disabled</StatusPill>
                                 )}
                             </Row>
-                            <Row label="Current session">{isGuest ? 'Guest (demo)' : 'Wallet'}</Row>
+                            <Row label="Current session">{sessionLabel}</Row>
                         </dl>
-                        {isGuest && (
-                            <Button
-                                variant="outline"
-                                className="mt-4 self-start rounded-xl border-border"
-                                onClick={() => {
-                                    exitGuestMode();
-                                    navigate('/login');
-                                }}
-                            >
-                                Exit guest mode
-                            </Button>
-                        )}
+                        <div className="mt-4 flex flex-wrap gap-2">
+                            {isGuest && (
+                                <Button
+                                    variant="outline"
+                                    className="rounded-xl border-border"
+                                    onClick={() => {
+                                        exitGuestMode();
+                                        navigate('/login');
+                                    }}
+                                >
+                                    Exit guest mode
+                                </Button>
+                            )}
+                            <SignOutButton />
+                        </div>
                     </SurfaceCard>
                 </div>
             </section>
@@ -109,6 +125,13 @@ const Settings = () => {
                 <WalletIdentityCard />
                 <ProfileDataCard />
             </section>
+
+            <p className="text-xs text-muted-foreground">
+                <Link to="/privacy" className="font-medium text-primary-strong hover:underline">
+                    Privacy Policy
+                </Link>{' '}
+                — how Breakpoint Connect stores and uses your data.
+            </p>
         </div>
     );
 };

@@ -1,4 +1,4 @@
-import { NavLink } from 'react-router-dom';
+import { Link, NavLink } from 'react-router-dom';
 import { NAV_ITEMS } from '@/lib/navigation';
 import { cn } from '@/lib/utils';
 import BrandLogo from './BrandLogo';
@@ -40,8 +40,14 @@ const AppSidebar = () => (
             </ul>
         </nav>
 
-        <div className="border-t border-border p-3">
+        <div className="flex flex-col gap-2 border-t border-border p-3">
             <SidebarWalletPanel />
+            <Link
+                to="/privacy"
+                className="hidden px-1 text-center text-xs text-muted-foreground hover:text-foreground hover:underline lg:block lg:text-left"
+            >
+                Privacy Policy
+            </Link>
         </div>
     </aside>
 );

@@ -1,9 +1,10 @@
-import { NavLink } from 'react-router-dom';
+import { Link, NavLink } from 'react-router-dom';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { NAV_ITEMS } from '@/lib/navigation';
 import { cn } from '@/lib/utils';
 import BrandLogo from './BrandLogo';
 import SidebarWalletPanel from './SidebarWalletPanel';
+import SignOutButton from './SignOutButton';
 import NetworkBadge from '@/components/wallet/NetworkBadge';
 
 interface MobileNavSheetProps {
@@ -60,6 +61,10 @@ const MobileNavSheet = ({ open, onOpenChange }: MobileNavSheetProps) => (
             <div className="flex flex-col gap-3 border-t border-border p-4">
                 <NetworkBadge className="self-start" />
                 <SidebarWalletPanel expanded />
+                <SignOutButton className="w-full" />
+                <Link to="/privacy" onClick={() => onOpenChange(false)} className="text-xs text-muted-foreground hover:text-foreground hover:underline">
+                    Privacy Policy
+                </Link>
             </div>
         </SheetContent>
     </Sheet>

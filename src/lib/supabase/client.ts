@@ -35,6 +35,21 @@ let anonPromise: Promise<string | null> | null = null;
  * must treat null as "no backend identity yet" and surface a clear error
  * instead of writing rows with a missing owner.
  */
+/**
+ * Drops the cached anonymous identity (module state + flag) — used by
+ * sign-out so the next data-layer call establishes a fresh identity
+ * instead of reusing the previous user's anonymous session.
+ */
+export const resetAnonUserId = (): void => {
+    anonUserId = null;
+    anonPromise = null;
+    try {
+        localStorage.removeItem(ANON_FLAG_KEY);
+    } catch {
+        // Private mode / blocked storage: nothing to clear.
+    }
+};
+
 export const getAnonUserId = (): Promise<string | null> => {
     if (!supabase) return Promise.resolve(null);
     if (anonUserId) return Promise.resolve(anonUserId);

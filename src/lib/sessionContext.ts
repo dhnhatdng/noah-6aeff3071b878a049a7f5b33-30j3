@@ -25,6 +25,16 @@ export interface SessionContextValue {
      * data layer and must never open the app on their own.
      */
     supabaseUserId: string | null;
+    /**
+     * How the current session was established, for display only.
+     * 'google' — real Supabase user whose provider is Google; 'wallet' —
+     * a connected Solana wallet; 'guest' — explicit guest/demo mode;
+     * 'other' — a real Supabase user via another provider; null — no
+     * signed-in session. Never invent a more specific label than this.
+     */
+    signInMethod: 'guest' | 'google' | 'wallet' | 'other' | null;
+    /** Full sign-out: Supabase session + wallet + guest state, then /login. */
+    signOut: () => Promise<void>;
     ownership: OwnershipState;
     verifyOwnership: () => Promise<void>;
     connectDialogOpen: boolean;

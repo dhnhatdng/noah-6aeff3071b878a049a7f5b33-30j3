@@ -1,11 +1,23 @@
 import { Link } from 'react-router-dom';
 import { CheckCircle2, ChevronRight, Circle } from 'lucide-react';
 import SurfaceCard from '@/components/common/SurfaceCard';
+import { useProfile } from '@/hooks/useProfile';
 import { useProfileCompletion } from '@/hooks/useProfileCompletion';
 import { cn } from '@/lib/utils';
 
 const NextStepsCard = ({ className }: { className?: string }) => {
     const { steps } = useProfileCompletion();
+    const { status } = useProfile();
+
+    // Same flash as the completion ring: while loading, every step would
+    // wrongly show "To do".
+    if (status === 'loading') {
+        return (
+            <SurfaceCard title="Suggested next steps" description="Work through these to get the most out of the event." className={className}>
+                <p className="py-3 text-sm text-muted-foreground">Loading your profile…</p>
+            </SurfaceCard>
+        );
+    }
 
     return (
         <SurfaceCard title="Suggested next steps" description="Work through these to get the most out of the event." className={className}>

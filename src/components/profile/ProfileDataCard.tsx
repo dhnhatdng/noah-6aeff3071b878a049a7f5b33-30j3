@@ -24,7 +24,13 @@ const ProfileDataCard = ({ className }: { className?: string }) => {
             <dl className="divide-y divide-border">
                 <Row label="Storage">{storageKind === 'local' ? 'This browser only' : 'Cloud'}</Row>
                 <Row label="Cloud sync">
-                    <StatusPill dot>Pending backend</StatusPill>
+                    {storageKind === 'supabase' ? (
+                        <StatusPill variant="success" dot>
+                            Synced
+                        </StatusPill>
+                    ) : (
+                        <StatusPill dot>This browser only</StatusPill>
+                    )}
                 </Row>
                 <Row label="Your profile">
                     {profile ? <span className="font-mono text-xs">{profile.id.slice(0, 8)}…</span> : 'Not created'}

@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import { ArrowRight } from 'lucide-react';
 import SurfaceCard from '@/components/common/SurfaceCard';
+import { useProfile } from '@/hooks/useProfile';
 import { useProfileCompletion } from '@/hooks/useProfileCompletion';
 
 const RADIUS = 42;
@@ -8,6 +9,20 @@ const CIRC = 2 * Math.PI * RADIUS;
 
 const ProfileCompletionCard = ({ className }: { className?: string }) => {
     const { completed, total, percent } = useProfileCompletion();
+    const { status } = useProfile();
+
+    // While the profile is still loading, show a placeholder — never the
+    // empty 0% state, which reads as "no profile" and is wrong.
+    if (status === 'loading') {
+        return (
+            <SurfaceCard title="Profile completion" className={className}>
+                <div className="flex flex-1 items-center gap-5">
+                    <div className="h-28 w-28 shrink-0 animate-pulse rounded-full bg-secondary" aria-hidden />
+                    <p className="text-sm text-muted-foreground">Loading your profile…</p>
+                </div>
+            </SurfaceCard>
+        );
+    }
 
     return (
         <SurfaceCard title="Profile completion" className={className}>
